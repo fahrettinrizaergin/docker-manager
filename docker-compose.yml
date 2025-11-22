@@ -109,6 +109,21 @@ services:
     networks:
       - docker-manager-network
       - web
+  
+  adminer:
+    image: adminer:standalone
+    container_name: dockermanager-adminer
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+    networks:
+      - docker-manager-network
+    depends_on:
+      - postgres
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adminer.rule=PathPrefix(`/adminer`)"
+      - "traefik.http.services.adminer.loadbalancer.server.port=8080"
 
 networks:
   docker-manager-network:
