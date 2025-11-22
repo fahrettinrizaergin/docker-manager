@@ -1,0 +1,82 @@
+# PostgreSQL Database Template
+name: PostgreSQL
+slug: postgresql
+description: PostgreSQL is a powerful, open source object-relational database system
+category: database
+icon: postgresql
+version: "15.0"
+is_official: true
+
+docker_compose: |
+  version: '3.8'
+  
+  services:
+    postgres:
+      image: postgres:15-alpine
+      container_name: ${APP_NAME:-postgres}
+      restart: unless-stopped
+      environment:
+        POSTGRES_USER: ${POSTGRES_USER:-postgres}
+        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        POSTGRES_DB: ${POSTGRES_DB:-database}
+        PGDATA: /var/lib/postgresql/data/pgdata
+      ports:
+        - "${POSTGRES_PORT:-5432}:5432"
+      volumes:
+        - postgres_data:/var/lib/postgresql/data
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+  
+  volumes:
+    postgres_data:
+      driver: local
+
+env_template: |
+  # PostgreSQL Configuration
+  POSTGRES_USER=myuser
+  POSTGRES_PASSWORD=change_me_to_secure_password
+  POSTGRES_DB=mydatabase
+  POSTGRES_PORT=5432
+  
+  # Application Name
+  APP_NAME=my-postgres
+
+readme: |
+  # PostgreSQL Template
+  
+  This template deploys a PostgreSQL 15 database with Alpine Linux.
+  
+  ## Features
+  - PostgreSQL 15 (Alpine)
+  - Automatic health checks
+  - Persistent data storage
+  - Configurable user, password, and database name
+  
+  ## Environment Variables
+  
+  - `POSTGRES_USER`: Database user (default: postgres)
+  - `POSTGRES_PASSWORD`: Database password (required)
+  - `POSTGRES_DB`: Database name (default: database)
+  - `POSTGRES_PORT`: External port (default: 5432)
+  - `APP_NAME`: Container name (default: postgres)
+  
+  ## Connection String
+  
+  ```
+  postgresql://POSTGRES_USER:POSTGRES_PASSWORD@localhost:POSTGRES_PORT/POSTGRES_DB
+  ```
+  
+  ## Backup
+  
+  ```bash
+  docker exec my-postgres pg_dump -U myuser mydatabase > backup.sql
+  ```
+  
+  ## Restore
+  
+  ```bash
+  docker exec -i my-postgres psql -U myuser mydatabase < backup.sql
+  ```

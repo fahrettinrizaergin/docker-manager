@@ -1,0 +1,97 @@
+# Nginx Web Server Template
+name: Nginx
+slug: nginx
+description: High-performance HTTP server and reverse proxy
+category: web-server
+icon: nginx
+version: "1.25"
+is_official: true
+
+docker_compose: |
+  version: '3.8'
+  
+  services:
+    nginx:
+      image: nginx:${NGINX_VERSION:-1.25-alpine}
+      container_name: ${APP_NAME:-nginx}
+      restart: unless-stopped
+      ports:
+        - "${HTTP_PORT:-80}:80"
+        - "${HTTPS_PORT:-443}:443"
+      volumes:
+        - ./html:/usr/share/nginx/html:ro
+        - ./conf.d:/etc/nginx/conf.d:ro
+        - ./ssl:/etc/nginx/ssl:ro
+        - nginx_logs:/var/log/nginx
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.${APP_NAME:-nginx}.rule=Host(`${DOMAIN}`)"
+        - "traefik.http.services.${APP_NAME:-nginx}.loadbalancer.server.port=80"
+      healthcheck:
+        test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+        interval: 30s
+        timeout: 10s
+        retries: 3
+  
+  volumes:
+    nginx_logs:
+      driver: local
+
+env_template: |
+  # Nginx Configuration
+  NGINX_VERSION=1.25-alpine
+  APP_NAME=my-nginx
+  
+  # Ports
+  HTTP_PORT=80
+  HTTPS_PORT=443
+  
+  # Domain (for Traefik)
+  DOMAIN=example.com
+
+readme: |
+  # Nginx Template
+  
+  This template deploys an Nginx web server with support for custom configuration.
+  
+  ## Features
+  - Nginx 1.25 (Alpine)
+  - Automatic health checks
+  - Traefik integration
+  - Custom configuration support
+  - SSL/TLS ready
+  
+  ## Directory Structure
+  
+  Create these directories in your project:
+  
+  ```
+  .
+  ├── html/           # Static web files
+  ├── conf.d/         # Nginx configuration files
+  └── ssl/            # SSL certificates
+  ```
+  
+  ## Example Configuration
+  
+  Create `conf.d/default.conf`:
+  
+  ```nginx
+  server {
+      listen 80;
+      server_name localhost;
+      
+      location / {
+          root /usr/share/nginx/html;
+          index index.html;
+      }
+  }
+  ```
+  
+  ## Static Files
+  
+  Place your HTML files in the `html/` directory.
+  
+  ## SSL/TLS
+  
+  Place your certificates in the `ssl/` directory and update the configuration.
