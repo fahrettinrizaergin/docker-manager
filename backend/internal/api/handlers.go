@@ -4,7 +4,9 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/fahrettinrizaergin/docker-manager/internal/auth"
 	"github.com/fahrettinrizaergin/docker-manager/internal/config"
 	"github.com/fahrettinrizaergin/docker-manager/internal/constants"
 	"github.com/fahrettinrizaergin/docker-manager/internal/models"
@@ -19,23 +21,136 @@ import (
 
 // AuthHandler handles authentication
 type AuthHandler struct {
-	cfg *config.Config
+	cfg         *config.Config
+	userService *service.UserService
 }
 
-func NewAuthHandler(cfg *config.Config) *AuthHandler {
-	return &AuthHandler{cfg: cfg}
+func NewAuthHandler(cfg *config.Config, userService *service.UserService) *AuthHandler {
+	return &AuthHandler{
+		cfg:         cfg,
+		userService: userService,
+	}
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "Register endpoint - not implemented"})
+	var req struct {
+		Email     string `json:"email" binding:"required,email"`
+		Username  string `json:"username" binding:"required"`
+		Password  string `json:"password" binding:"required,min=8"`
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	// Hash password
+	hashedPassword, err := auth.HashPassword(req.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
+
+	// Create user
+	user := &models.User{
+		Email:        req.Email,
+		Username:     req.Username,
+		PasswordHash: hashedPassword,
+		FirstName:    req.FirstName,
+		LastName:     req.LastName,
+		Role:         "user",
+		IsActive:     true,
+	}
+
+	if err := h.userService.Create(user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Generate token
+	token, err := auth.GenerateToken(user.ID, user.Email, user.Role, h.cfg.App.JWTSecret, 24*7) // 7 days
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"user":  user,
+		"token": token,
+	})
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "Login endpoint - not implemented"})
+	var req struct {
+		Email    string `json:"email" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	// Get user by email
+	user, err := h.userService.GetByEmail(req.Email)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		return
+	}
+
+	// Check password
+	if !auth.CheckPassword(req.Password, user.PasswordHash) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		return
+	}
+
+	// Check if user is active
+	if !user.IsActive {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Account is disabled"})
+		return
+	}
+
+	// Update last login
+	_ = h.userService.UpdateLastLogin(user.ID)
+
+	// Generate token
+	token, err := auth.GenerateToken(user.ID, user.Email, user.Role, h.cfg.App.JWTSecret, 24*7) // 7 days
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"user":  user,
+		"token": token,
+	})
 }
 
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "RefreshToken endpoint - not implemented"})
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	user, err := h.userService.GetByID(userID.(uuid.UUID))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Generate new token
+	token, err := auth.GenerateToken(user.ID, user.Email, user.Role, h.cfg.App.JWTSecret, 24*7) // 7 days
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"token": token,
+	})
 }
 
 func (h *AuthHandler) GitLabCallback(c *gin.Context) {
@@ -52,27 +167,215 @@ func (h *AuthHandler) GiteaCallback(c *gin.Context) {
 
 // UserHandler handles user operations
 type UserHandler struct {
-	cfg *config.Config
+	cfg     *config.Config
+	service *service.UserService
 }
 
-func NewUserHandler(cfg *config.Config) *UserHandler {
-	return &UserHandler{cfg: cfg}
+func NewUserHandler(cfg *config.Config, svc *service.UserService) *UserHandler {
+	return &UserHandler{
+		cfg:     cfg,
+		service: svc,
+	}
 }
 
 func (h *UserHandler) GetCurrentUser(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "GetCurrentUser endpoint - not implemented"})
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	user, err := h.service.GetByID(userID.(uuid.UUID))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Get user's organizations and teams
+	orgs, _ := h.service.GetOrganizations(user.ID)
+	teams, _ := h.service.GetTeams(user.ID)
+
+	user.Organizations = orgs
+	user.Teams = teams
+
+	c.JSON(http.StatusOK, user)
 }
 
 func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "UpdateCurrentUser endpoint - not implemented"})
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Prevent users from updating their own role
+	delete(updates, "role")
+	delete(updates, "is_active")
+
+	user, err := h.service.Update(userID.(uuid.UUID), updates)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+func (h *UserHandler) UpdatePassword(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	var req struct {
+		CurrentPassword string `json:"current_password" binding:"required"`
+		NewPassword     string `json:"new_password" binding:"required,min=8"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	// Get user
+	user, err := h.service.GetByID(userID.(uuid.UUID))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Verify current password
+	if !auth.CheckPassword(req.CurrentPassword, user.PasswordHash) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Current password is incorrect"})
+		return
+	}
+
+	// Hash new password
+	hashedPassword, err := auth.HashPassword(req.NewPassword)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
+
+	// Update password
+	if err := h.service.UpdatePassword(user.ID, hashedPassword); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password updated successfully"})
 }
 
 func (h *UserHandler) ListUsers(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "ListUsers endpoint - not implemented"})
+	// Only admins can list users
+	userRole, exists := c.Get("user_role")
+	if !exists || userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	users, total, err := h.service.List(page, pageSize)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":        users,
+		"total":       total,
+		"page":        page,
+		"page_size":   pageSize,
+		"total_pages": (total + int64(pageSize) - 1) / int64(pageSize),
+	})
 }
 
 func (h *UserHandler) GetUser(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "GetUser endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	user, err := h.service.GetByID(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+func (h *UserHandler) UpdateUser(c *gin.Context) {
+	// Only admins can update other users
+	userRole, exists := c.Get("user_role")
+	if !exists || userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	user, err := h.service.Update(id, updates)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+func (h *UserHandler) DeleteUser(c *gin.Context) {
+	// Only admins can delete users
+	userRole, exists := c.Get("user_role")
+	if !exists || userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	if err := h.service.Delete(id); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }
 
 // OrganizationHandler handles organization operations
@@ -1039,4 +1342,468 @@ func NewActivityHandler(cfg *config.Config) *ActivityHandler {
 
 func (h *ActivityHandler) ListActivities(c *gin.Context) {
 	c.JSON(501, gin.H{"message": "ListActivities endpoint - not implemented"})
+}
+
+// ContainerHandler handles container operations
+type ContainerHandler struct {
+	cfg     *config.Config
+	service *service.ContainerService
+}
+
+func NewContainerHandler(cfg *config.Config, svc *service.ContainerService) *ContainerHandler {
+	return &ContainerHandler{
+		cfg:     cfg,
+		service: svc,
+	}
+}
+
+func (h *ContainerHandler) CreateContainer(c *gin.Context) {
+	var req models.Container
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	if err := h.service.Create(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, req)
+}
+
+func (h *ContainerHandler) ListContainers(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	appIDStr := c.Query("application_id")
+	nodeIDStr := c.Query("node_id")
+
+	var containers []models.Container
+	var total int64
+	var err error
+
+	if appIDStr != "" {
+		appID, err := uuid.Parse(appIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+			return
+		}
+		containers, err = h.service.ListByApplicationID(appID)
+		total = int64(len(containers))
+	} else if nodeIDStr != "" {
+		nodeID, err := uuid.Parse(nodeIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid node ID"})
+			return
+		}
+		containers, err = h.service.ListByNodeID(nodeID)
+		total = int64(len(containers))
+	} else {
+		containers, total, err = h.service.List(page, pageSize)
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch containers"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":        containers,
+		"total":       total,
+		"page":        page,
+		"page_size":   pageSize,
+		"total_pages": (total + int64(pageSize) - 1) / int64(pageSize),
+	})
+}
+
+func (h *ContainerHandler) GetContainer(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
+		return
+	}
+
+	container, err := h.service.GetByID(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Container not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch container"})
+		return
+	}
+
+	c.JSON(http.StatusOK, container)
+}
+
+func (h *ContainerHandler) UpdateContainer(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
+		return
+	}
+
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	container, err := h.service.Update(id, updates)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Container not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, container)
+}
+
+func (h *ContainerHandler) DeleteContainer(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
+		return
+	}
+
+	if err := h.service.Delete(id); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Container not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete container"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Container deleted successfully"})
+}
+
+func (h *ContainerHandler) StartContainer(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
+		return
+	}
+
+	if err := h.service.UpdateStatus(id, "running"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start container"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Container started successfully"})
+}
+
+func (h *ContainerHandler) StopContainer(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
+		return
+	}
+
+	if err := h.service.UpdateStatus(id, "stopped"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stop container"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Container stopped successfully"})
+}
+
+func (h *ContainerHandler) RestartContainer(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
+		return
+	}
+
+	// First stop, then start
+	if err := h.service.UpdateStatus(id, "stopped"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stop container"})
+		return
+	}
+
+	if err := h.service.UpdateStatus(id, "running"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start container"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Container restarted successfully"})
+}
+
+// PermissionHandler handles permission operations
+type PermissionHandler struct {
+	cfg     *config.Config
+	service *service.PermissionService
+}
+
+func NewPermissionHandler(cfg *config.Config, svc *service.PermissionService) *PermissionHandler {
+	return &PermissionHandler{
+		cfg:     cfg,
+		service: svc,
+	}
+}
+
+func (h *PermissionHandler) GrantPermission(c *gin.Context) {
+	// Only admins can grant permissions
+	userRole, exists := c.Get("user_role")
+	if !exists || userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	var req struct {
+		UserID       string   `json:"user_id" binding:"required"`
+		ResourceType string   `json:"resource_type" binding:"required"`
+		ResourceID   string   `json:"resource_id" binding:"required"`
+		Permissions  []string `json:"permissions" binding:"required"`
+		ExpiresAt    *string  `json:"expires_at"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	resourceID, err := uuid.Parse(req.ResourceID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resource ID"})
+		return
+	}
+
+	grantedByID, _ := c.Get("user_id")
+
+	var expiresAt *time.Time
+	if req.ExpiresAt != nil {
+		t, err := time.Parse(time.RFC3339, *req.ExpiresAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expires_at format"})
+			return
+		}
+		expiresAt = &t
+	}
+
+	err = h.service.GrantPermission(userID, resourceID, req.ResourceType, req.Permissions, grantedByID.(uuid.UUID), expiresAt)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Permission granted successfully"})
+}
+
+func (h *PermissionHandler) RevokePermission(c *gin.Context) {
+	// Only admins can revoke permissions
+	userRole, exists := c.Get("user_role")
+	if !exists || userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	var req struct {
+		UserID       string `json:"user_id" binding:"required"`
+		ResourceType string `json:"resource_type" binding:"required"`
+		ResourceID   string `json:"resource_id" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	resourceID, err := uuid.Parse(req.ResourceID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resource ID"})
+		return
+	}
+
+	err = h.service.RevokePermission(userID, req.ResourceType, resourceID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to revoke permission"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Permission revoked successfully"})
+}
+
+func (h *PermissionHandler) GetUserPermissions(c *gin.Context) {
+	userID, err := uuid.Parse(c.Param("userId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Users can only view their own permissions unless they are admin
+	currentUserID, _ := c.Get("user_id")
+	userRole, _ := c.Get("user_role")
+	if currentUserID.(uuid.UUID) != userID && userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	permissions, err := h.service.GetUserPermissions(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch permissions"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": permissions})
+}
+
+func (h *PermissionHandler) GetResourcePermissions(c *gin.Context) {
+	// Only admins can view resource permissions
+	userRole, exists := c.Get("user_role")
+	if !exists || userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	resourceType := c.Query("resource_type")
+	resourceIDStr := c.Query("resource_id")
+
+	if resourceType == "" || resourceIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "resource_type and resource_id are required"})
+		return
+	}
+
+	resourceID, err := uuid.Parse(resourceIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resource ID"})
+		return
+	}
+
+	permissions, err := h.service.GetResourcePermissions(resourceType, resourceID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch permissions"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": permissions})
+}
+
+func (h *PermissionHandler) GetUserResources(c *gin.Context) {
+	userID, err := uuid.Parse(c.Param("userId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Users can only view their own resources unless they are admin
+	currentUserID, _ := c.Get("user_id")
+	userRole, _ := c.Get("user_role")
+	if currentUserID.(uuid.UUID) != userID && userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	resourceType := c.Query("type")
+	if resourceType == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "type parameter is required"})
+		return
+	}
+
+	var resourceIDs []uuid.UUID
+	switch resourceType {
+	case models.ResourceOrganization:
+		resourceIDs, err = h.service.GetUserOrganizations(userID)
+	case models.ResourceProject:
+		resourceIDs, err = h.service.GetUserProjects(userID)
+	case models.ResourceApplication:
+		resourceIDs, err = h.service.GetUserApplications(userID)
+	case models.ResourceContainer:
+		resourceIDs, err = h.service.GetUserContainers(userID)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resource type"})
+		return
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user resources"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": resourceIDs})
+}
+
+func (h *PermissionHandler) UpdatePermission(c *gin.Context) {
+	// Only admins can update permissions
+	userRole, exists := c.Get("user_role")
+	if !exists || userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid permission ID"})
+		return
+	}
+
+	var req struct {
+		Permissions []string `json:"permissions" binding:"required"`
+		ExpiresAt   *string  `json:"expires_at"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	var expiresAt *time.Time
+	if req.ExpiresAt != nil {
+		t, err := time.Parse(time.RFC3339, *req.ExpiresAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expires_at format"})
+			return
+		}
+		expiresAt = &t
+	}
+
+	err = h.service.UpdatePermission(id, req.Permissions, expiresAt)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Permission not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Permission updated successfully"})
+}
+
+func (h *PermissionHandler) DeletePermission(c *gin.Context) {
+	// Only admins can delete permissions
+	userRole, exists := c.Get("user_role")
+	if !exists || userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid permission ID"})
+		return
+	}
+
+	err = h.service.DeletePermission(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete permission"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Permission deleted successfully"})
 }

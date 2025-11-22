@@ -8,6 +8,7 @@ import 'react-toastify/dist/ReactToastify.css';
 // Pages
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
+import Explorer from './pages/Explorer';
 import Organizations from './pages/Organizations';
 import Projects from './pages/Projects';
 import Applications from './pages/Applications';
@@ -48,6 +49,7 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Dashboard />} />
+            <Route path="/explorer" element={<Explorer />} />
             <Route path="/organizations" element={<Organizations />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/applications" element={<Applications />} />
