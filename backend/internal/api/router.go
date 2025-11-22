@@ -3,11 +3,24 @@ package api
 import (
 	"github.com/fahrettinrizaergin/docker-manager/internal/config"
 	"github.com/fahrettinrizaergin/docker-manager/internal/middleware"
+	"github.com/fahrettinrizaergin/docker-manager/internal/repository"
+	"github.com/fahrettinrizaergin/docker-manager/internal/service"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // SetupRouter sets up the HTTP router
-func SetupRouter(cfg *config.Config) *gin.Engine {
+func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
+	// Initialize repositories
+	orgRepo := repository.NewOrganizationRepository(db)
+	projectRepo := repository.NewProjectRepository(db)
+	appRepo := repository.NewApplicationRepository(db)
+
+	// Initialize services
+	orgService := service.NewOrganizationService(orgRepo)
+	projectService := service.NewProjectService(projectRepo)
+	appService := service.NewApplicationService(appRepo)
+
 	router := gin.Default()
 
 	// Apply middleware
@@ -18,7 +31,7 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"status": "ok",
+			"status":  "ok",
 			"version": "1.0.0",
 		})
 	})
@@ -33,7 +46,7 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
 			auth.POST("/refresh", authHandler.RefreshToken)
-			
+
 			// OAuth callbacks
 			if cfg.VCS.GitLab.Enabled {
 				auth.GET("/gitlab/callback", authHandler.GitLabCallback)
@@ -63,13 +76,13 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			// Organization routes
 			organizations := protected.Group("/organizations")
 			{
-				orgHandler := NewOrganizationHandler(cfg)
+				orgHandler := NewOrganizationHandler(cfg, orgService)
 				organizations.POST("", orgHandler.CreateOrganization)
 				organizations.GET("", orgHandler.ListOrganizations)
 				organizations.GET("/:id", orgHandler.GetOrganization)
 				organizations.PUT("/:id", orgHandler.UpdateOrganization)
 				organizations.DELETE("/:id", orgHandler.DeleteOrganization)
-				
+
 				// Organization members
 				organizations.GET("/:id/members", orgHandler.ListMembers)
 				organizations.POST("/:id/members", orgHandler.AddMember)
@@ -92,19 +105,19 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			// Project routes
 			projects := protected.Group("/projects")
 			{
-				projectHandler := NewProjectHandler(cfg)
+				projectHandler := NewProjectHandler(cfg, projectService)
 				projects.POST("", projectHandler.CreateProject)
 				projects.GET("", projectHandler.ListProjects)
 				projects.GET("/:id", projectHandler.GetProject)
 				projects.PUT("/:id", projectHandler.UpdateProject)
 				projects.DELETE("/:id", projectHandler.DeleteProject)
-				
+
 				// Folders
 				projects.POST("/:id/folders", projectHandler.CreateFolder)
 				projects.GET("/:id/folders", projectHandler.ListFolders)
 				projects.PUT("/:id/folders/:folderId", projectHandler.UpdateFolder)
 				projects.DELETE("/:id/folders/:folderId", projectHandler.DeleteFolder)
-				
+
 				// Environments
 				projects.POST("/:id/environments", projectHandler.CreateEnvironment)
 				projects.GET("/:id/environments", projectHandler.ListEnvironments)
@@ -113,29 +126,29 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			// Application routes
 			applications := protected.Group("/applications")
 			{
-				appHandler := NewApplicationHandler(cfg)
+				appHandler := NewApplicationHandler(cfg, appService)
 				applications.POST("", appHandler.CreateApplication)
 				applications.GET("", appHandler.ListApplications)
 				applications.GET("/:id", appHandler.GetApplication)
 				applications.PUT("/:id", appHandler.UpdateApplication)
 				applications.DELETE("/:id", appHandler.DeleteApplication)
-				
+
 				// Application actions
 				applications.POST("/:id/start", appHandler.StartApplication)
 				applications.POST("/:id/stop", appHandler.StopApplication)
 				applications.POST("/:id/restart", appHandler.RestartApplication)
 				applications.POST("/:id/deploy", appHandler.DeployApplication)
 				applications.POST("/:id/rollback", appHandler.RollbackApplication)
-				
+
 				// Environment variables
 				applications.GET("/:id/env", appHandler.ListEnvVars)
 				applications.POST("/:id/env", appHandler.CreateEnvVar)
 				applications.PUT("/:id/env/:envId", appHandler.UpdateEnvVar)
 				applications.DELETE("/:id/env/:envId", appHandler.DeleteEnvVar)
-				
+
 				// Logs
 				applications.GET("/:id/logs", appHandler.GetLogs)
-				
+
 				// Stats
 				applications.GET("/:id/stats", appHandler.GetStats)
 			}

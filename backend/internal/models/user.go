@@ -9,18 +9,18 @@ import (
 
 // User represents a user in the system
 type User struct {
-	ID           uuid.UUID `gorm:"type:uuid;primary_key" json:"id"`
-	Email        string    `gorm:"uniqueIndex;not null" json:"email"`
-	Username     string    `gorm:"uniqueIndex;not null" json:"username"`
-	PasswordHash string    `gorm:"not null" json:"-"`
-	FirstName    string    `json:"first_name"`
-	LastName     string    `json:"last_name"`
-	Avatar       string    `json:"avatar"`
-	Role         string    `gorm:"default:'user'" json:"role"` // admin, user
-	IsActive     bool      `gorm:"default:true" json:"is_active"`
-	LastLoginAt  *time.Time `json:"last_login_at"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID           uuid.UUID      `gorm:"type:uuid;primary_key" json:"id"`
+	Email        string         `gorm:"uniqueIndex;not null" json:"email"`
+	Username     string         `gorm:"uniqueIndex;not null" json:"username"`
+	PasswordHash string         `gorm:"not null" json:"-"`
+	FirstName    string         `json:"first_name"`
+	LastName     string         `json:"last_name"`
+	Avatar       string         `json:"avatar"`
+	Role         string         `gorm:"default:'user'" json:"role"` // admin, user
+	IsActive     bool           `gorm:"default:true" json:"is_active"`
+	LastLoginAt  *time.Time     `json:"last_login_at"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
@@ -38,16 +38,16 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 
 // Organization represents an organization/company
 type Organization struct {
-	ID          uuid.UUID `gorm:"type:uuid;primary_key" json:"id"`
-	Name        string    `gorm:"not null" json:"name"`
-	Slug        string    `gorm:"uniqueIndex;not null" json:"slug"`
-	Description string    `json:"description"`
-	Avatar      string    `json:"avatar"`
-	OwnerID     uuid.UUID `gorm:"type:uuid;not null" json:"owner_id"`
-	IsActive    bool      `gorm:"default:true" json:"is_active"`
-	Settings    string    `gorm:"type:jsonb" json:"settings"` // JSON settings
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          uuid.UUID      `gorm:"type:uuid;primary_key" json:"id"`
+	Name        string         `gorm:"not null" json:"name"`
+	Slug        string         `gorm:"uniqueIndex;not null" json:"slug"`
+	Description string         `json:"description"`
+	Avatar      string         `json:"avatar"`
+	OwnerID     uuid.UUID      `gorm:"type:uuid;not null" json:"owner_id"`
+	IsActive    bool           `gorm:"default:true" json:"is_active"`
+	Settings    string         `gorm:"type:jsonb" json:"settings"` // JSON settings
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
@@ -66,14 +66,14 @@ func (o *Organization) BeforeCreate(tx *gorm.DB) error {
 
 // Team represents a team within an organization
 type Team struct {
-	ID             uuid.UUID `gorm:"type:uuid;primary_key" json:"id"`
-	OrganizationID uuid.UUID `gorm:"type:uuid;not null;index" json:"organization_id"`
-	Name           string    `gorm:"not null" json:"name"`
-	Slug           string    `gorm:"not null" json:"slug"`
-	Description    string    `json:"description"`
-	Permissions    string    `gorm:"type:jsonb" json:"permissions"` // JSON permissions
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID             uuid.UUID      `gorm:"type:uuid;primary_key" json:"id"`
+	OrganizationID uuid.UUID      `gorm:"type:uuid;not null;index" json:"organization_id"`
+	Name           string         `gorm:"not null" json:"name"`
+	Slug           string         `gorm:"not null" json:"slug"`
+	Description    string         `json:"description"`
+	Permissions    string         `gorm:"type:jsonb" json:"permissions"` // JSON permissions
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
