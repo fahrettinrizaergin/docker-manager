@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
+  Container as MuiContainer,
   Typography,
   Paper,
   Box,
@@ -64,7 +64,7 @@ const ProjectDetail: React.FC = () => {
       setApplications(apps);
       
       // Load containers for all applications in the project
-      const containerPromises = apps.map((app) => 
+      const containerPromises = apps.map((app: Application) => 
         api.getContainers({ application_id: app.id })
       );
       const containerResponses = await Promise.all(containerPromises);
@@ -131,11 +131,11 @@ const ProjectDetail: React.FC = () => {
   if (loading) {
     return (
       <Layout>
-        <Container maxWidth="xl">
+        <MuiContainer maxWidth="xl">
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
             <CircularProgress />
           </Box>
-        </Container>
+        </MuiContainer>
       </Layout>
     );
   }
@@ -143,18 +143,18 @@ const ProjectDetail: React.FC = () => {
   if (!project) {
     return (
       <Layout>
-        <Container maxWidth="xl">
+        <MuiContainer maxWidth="xl">
           <Typography variant="h6" color="error">
             Project not found
           </Typography>
-        </Container>
+        </MuiContainer>
       </Layout>
     );
   }
 
   return (
     <Layout>
-      <Container maxWidth="xl">
+      <MuiContainer maxWidth="xl">
         <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box>
             <Typography variant="h4" component="h1">
@@ -331,7 +331,7 @@ const ProjectDetail: React.FC = () => {
             </TableContainer>
           )}
         </Paper>
-      </Container>
+      </MuiContainer>
     </Layout>
   );
 };
