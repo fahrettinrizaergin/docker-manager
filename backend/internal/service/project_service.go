@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/fahrettinrizaergin/docker-manager/internal/constants"
 	"github.com/fahrettinrizaergin/docker-manager/internal/models"
 	"github.com/fahrettinrizaergin/docker-manager/internal/repository"
 	"github.com/fahrettinrizaergin/docker-manager/internal/utils"
@@ -101,8 +102,7 @@ func (s *ProjectService) Update(id uuid.UUID, updates map[string]interface{}) (*
 		project.Icon = icon
 	}
 	if status, ok := updates["status"].(string); ok {
-		validStatuses := map[string]bool{"active": true, "archived": true, "suspended": true}
-		if !validStatuses[status] {
+		if !constants.ValidProjectStatuses()[status] {
 			return nil, errors.New("invalid status: must be active, archived, or suspended")
 		}
 		project.Status = status

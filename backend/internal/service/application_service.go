@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/fahrettinrizaergin/docker-manager/internal/constants"
 	"github.com/fahrettinrizaergin/docker-manager/internal/models"
 	"github.com/fahrettinrizaergin/docker-manager/internal/repository"
 	"github.com/fahrettinrizaergin/docker-manager/internal/utils"
@@ -39,8 +40,7 @@ func (s *ApplicationService) Create(app *models.Application) error {
 	}
 
 	// Validate application type
-	validTypes := map[string]bool{"docker-compose": true, "container": true, "template": true}
-	if !validTypes[app.Type] {
+	if !constants.ValidApplicationTypes()[app.Type] {
 		return errors.New("invalid application type: must be docker-compose, container, or template")
 	}
 
@@ -55,7 +55,7 @@ func (s *ApplicationService) Create(app *models.Application) error {
 
 	// Set default status if not provided
 	if app.Status == "" {
-		app.Status = "stopped"
+		app.Status = constants.ApplicationStatusStopped
 	}
 
 	return s.repo.Create(app)
@@ -117,8 +117,7 @@ func (s *ApplicationService) Update(id uuid.UUID, updates map[string]interface{}
 		app.Description = desc
 	}
 	if appType, ok := updates["type"].(string); ok {
-		validTypes := map[string]bool{"docker-compose": true, "container": true, "template": true}
-		if !validTypes[appType] {
+		if !constants.ValidApplicationTypes()[appType] {
 			return nil, errors.New("invalid application type")
 		}
 		app.Type = appType
@@ -222,11 +221,7 @@ func (s *ApplicationService) Update(id uuid.UUID, updates map[string]interface{}
 // UpdateStatus updates the status of an application
 func (s *ApplicationService) UpdateStatus(id uuid.UUID, status string) error {
 	// Validate status
-	validStatuses := map[string]bool{
-		"running": true, "stopped": true, "deploying": true,
-		"error": true, "paused": true,
-	}
-	if !validStatuses[status] {
+	if !constants.ValidApplicationStatuses()[status] {
 		return errors.New("invalid status")
 	}
 

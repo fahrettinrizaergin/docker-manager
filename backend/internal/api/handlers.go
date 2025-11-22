@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/fahrettinrizaergin/docker-manager/internal/config"
+	"github.com/fahrettinrizaergin/docker-manager/internal/constants"
 	"github.com/fahrettinrizaergin/docker-manager/internal/models"
 	"github.com/fahrettinrizaergin/docker-manager/internal/service"
 	"github.com/gin-gonic/gin"
@@ -666,7 +667,7 @@ func (h *ApplicationHandler) StartApplication(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.UpdateStatus(id, "running"); err != nil {
+	if err := h.service.UpdateStatus(id, constants.ApplicationStatusRunning); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start application"})
 		return
 	}
@@ -681,7 +682,7 @@ func (h *ApplicationHandler) StopApplication(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.UpdateStatus(id, "stopped"); err != nil {
+	if err := h.service.UpdateStatus(id, constants.ApplicationStatusStopped); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stop application"})
 		return
 	}
@@ -697,12 +698,12 @@ func (h *ApplicationHandler) RestartApplication(c *gin.Context) {
 	}
 
 	// First stop, then start
-	if err := h.service.UpdateStatus(id, "stopped"); err != nil {
+	if err := h.service.UpdateStatus(id, constants.ApplicationStatusStopped); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stop application"})
 		return
 	}
 
-	if err := h.service.UpdateStatus(id, "running"); err != nil {
+	if err := h.service.UpdateStatus(id, constants.ApplicationStatusRunning); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start application"})
 		return
 	}
@@ -717,7 +718,7 @@ func (h *ApplicationHandler) DeployApplication(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.UpdateStatus(id, "deploying"); err != nil {
+	if err := h.service.UpdateStatus(id, constants.ApplicationStatusDeploying); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to deploy application"})
 		return
 	}

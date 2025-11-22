@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/fahrettinrizaergin/docker-manager/internal/constants"
 	"github.com/fahrettinrizaergin/docker-manager/internal/models"
 	"github.com/fahrettinrizaergin/docker-manager/internal/repository"
 	"github.com/fahrettinrizaergin/docker-manager/internal/utils"
@@ -141,8 +142,7 @@ func (s *OrganizationService) Delete(id uuid.UUID) error {
 // AddMember adds a user to an organization
 func (s *OrganizationService) AddMember(orgID, userID uuid.UUID, role string) error {
 	// Validate role
-	validRoles := map[string]bool{"owner": true, "admin": true, "member": true}
-	if !validRoles[role] {
+	if !constants.ValidOrganizationRoles()[role] {
 		return errors.New("invalid role: must be owner, admin, or member")
 	}
 
