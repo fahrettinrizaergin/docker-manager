@@ -10,6 +10,10 @@ git pull origin main || { echo "Git pull failed"; exit 1; }
 echo "Stopping containers..."
 docker-compose down --remove-orphans || true
 
+# Force remove containers to ensure ports are freed
+echo "Force removing containers..."
+docker rm -f dockermanager-traefik dockermanager-frontend dockermanager-backend dockermanager-redis dockermanager-postgres || true
+
 # Remove frontend volume to prevent stale node_modules
 echo "Cleaning up frontend volumes..."
 docker volume rm docker-manager_frontend_node_modules 2>/dev/null || true
