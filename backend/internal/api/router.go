@@ -12,12 +12,14 @@ import (
 // SetupRouter sets up the HTTP router
 func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	// Initialize repositories
+	userRepo := repository.NewUserRepository(db)
 	orgRepo := repository.NewOrganizationRepository(db)
 	projectRepo := repository.NewProjectRepository(db)
 	appRepo := repository.NewApplicationRepository(db)
 	containerRepo := repository.NewContainerRepository(db)
 
 	// Initialize services
+	userService := service.NewUserService(userRepo)
 	orgService := service.NewOrganizationService(orgRepo)
 	projectService := service.NewProjectService(projectRepo)
 	appService := service.NewApplicationService(appRepo)
@@ -44,10 +46,9 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 		// Public routes
 		auth := v1.Group("/auth")
 		{
-			authHandler := NewAuthHandler(cfg)
+			authHandler := NewAuthHandler(cfg, userService)
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
-			auth.POST("/refresh", authHandler.RefreshToken)
 
 			// OAuth callbacks
 			if cfg.VCS.GitLab.Enabled {
@@ -65,14 +66,24 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 		protected := v1.Group("")
 		protected.Use(middleware.Auth(cfg))
 		{
+			// Auth protected routes
+			authProtected := protected.Group("/auth")
+			{
+				authHandler := NewAuthHandler(cfg, userService)
+				authProtected.POST("/refresh", authHandler.RefreshToken)
+			}
+
 			// User routes
 			users := protected.Group("/users")
 			{
-				userHandler := NewUserHandler(cfg)
+				userHandler := NewUserHandler(cfg, userService)
 				users.GET("/me", userHandler.GetCurrentUser)
 				users.PUT("/me", userHandler.UpdateCurrentUser)
+				users.PUT("/me/password", userHandler.UpdatePassword)
 				users.GET("", userHandler.ListUsers)
 				users.GET("/:id", userHandler.GetUser)
+				users.PUT("/:id", userHandler.UpdateUser)
+				users.DELETE("/:id", userHandler.DeleteUser)
 			}
 
 			// Organization routes

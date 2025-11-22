@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/fahrettinrizaergin/docker-manager/internal/auth"
 	"github.com/fahrettinrizaergin/docker-manager/internal/config"
 	"github.com/fahrettinrizaergin/docker-manager/internal/constants"
 	"github.com/fahrettinrizaergin/docker-manager/internal/models"
@@ -19,23 +20,136 @@ import (
 
 // AuthHandler handles authentication
 type AuthHandler struct {
-	cfg *config.Config
+	cfg         *config.Config
+	userService *service.UserService
 }
 
-func NewAuthHandler(cfg *config.Config) *AuthHandler {
-	return &AuthHandler{cfg: cfg}
+func NewAuthHandler(cfg *config.Config, userService *service.UserService) *AuthHandler {
+	return &AuthHandler{
+		cfg:         cfg,
+		userService: userService,
+	}
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "Register endpoint - not implemented"})
+	var req struct {
+		Email     string `json:"email" binding:"required,email"`
+		Username  string `json:"username" binding:"required"`
+		Password  string `json:"password" binding:"required,min=8"`
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	// Hash password
+	hashedPassword, err := auth.HashPassword(req.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
+
+	// Create user
+	user := &models.User{
+		Email:        req.Email,
+		Username:     req.Username,
+		PasswordHash: hashedPassword,
+		FirstName:    req.FirstName,
+		LastName:     req.LastName,
+		Role:         "user",
+		IsActive:     true,
+	}
+
+	if err := h.userService.Create(user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Generate token
+	token, err := auth.GenerateToken(user.ID, user.Email, user.Role, h.cfg.App.JWTSecret, 24*7) // 7 days
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"user":  user,
+		"token": token,
+	})
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "Login endpoint - not implemented"})
+	var req struct {
+		Email    string `json:"email" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	// Get user by email
+	user, err := h.userService.GetByEmail(req.Email)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		return
+	}
+
+	// Check password
+	if !auth.CheckPassword(req.Password, user.PasswordHash) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		return
+	}
+
+	// Check if user is active
+	if !user.IsActive {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Account is disabled"})
+		return
+	}
+
+	// Update last login
+	_ = h.userService.UpdateLastLogin(user.ID)
+
+	// Generate token
+	token, err := auth.GenerateToken(user.ID, user.Email, user.Role, h.cfg.App.JWTSecret, 24*7) // 7 days
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"user":  user,
+		"token": token,
+	})
 }
 
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "RefreshToken endpoint - not implemented"})
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	user, err := h.userService.GetByID(userID.(uuid.UUID))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Generate new token
+	token, err := auth.GenerateToken(user.ID, user.Email, user.Role, h.cfg.App.JWTSecret, 24*7) // 7 days
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"token": token,
+	})
 }
 
 func (h *AuthHandler) GitLabCallback(c *gin.Context) {
@@ -52,27 +166,215 @@ func (h *AuthHandler) GiteaCallback(c *gin.Context) {
 
 // UserHandler handles user operations
 type UserHandler struct {
-	cfg *config.Config
+	cfg     *config.Config
+	service *service.UserService
 }
 
-func NewUserHandler(cfg *config.Config) *UserHandler {
-	return &UserHandler{cfg: cfg}
+func NewUserHandler(cfg *config.Config, svc *service.UserService) *UserHandler {
+	return &UserHandler{
+		cfg:     cfg,
+		service: svc,
+	}
 }
 
 func (h *UserHandler) GetCurrentUser(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "GetCurrentUser endpoint - not implemented"})
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	user, err := h.service.GetByID(userID.(uuid.UUID))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Get user's organizations and teams
+	orgs, _ := h.service.GetOrganizations(user.ID)
+	teams, _ := h.service.GetTeams(user.ID)
+
+	user.Organizations = orgs
+	user.Teams = teams
+
+	c.JSON(http.StatusOK, user)
 }
 
 func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "UpdateCurrentUser endpoint - not implemented"})
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Prevent users from updating their own role
+	delete(updates, "role")
+	delete(updates, "is_active")
+
+	user, err := h.service.Update(userID.(uuid.UUID), updates)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+func (h *UserHandler) UpdatePassword(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	var req struct {
+		CurrentPassword string `json:"current_password" binding:"required"`
+		NewPassword     string `json:"new_password" binding:"required,min=8"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	// Get user
+	user, err := h.service.GetByID(userID.(uuid.UUID))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Verify current password
+	if !auth.CheckPassword(req.CurrentPassword, user.PasswordHash) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Current password is incorrect"})
+		return
+	}
+
+	// Hash new password
+	hashedPassword, err := auth.HashPassword(req.NewPassword)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
+
+	// Update password
+	if err := h.service.UpdatePassword(user.ID, hashedPassword); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password updated successfully"})
 }
 
 func (h *UserHandler) ListUsers(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "ListUsers endpoint - not implemented"})
+	// Only admins can list users
+	userRole, exists := c.Get("user_role")
+	if !exists || userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	users, total, err := h.service.List(page, pageSize)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":        users,
+		"total":       total,
+		"page":        page,
+		"page_size":   pageSize,
+		"total_pages": (total + int64(pageSize) - 1) / int64(pageSize),
+	})
 }
 
 func (h *UserHandler) GetUser(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "GetUser endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	user, err := h.service.GetByID(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+func (h *UserHandler) UpdateUser(c *gin.Context) {
+	// Only admins can update other users
+	userRole, exists := c.Get("user_role")
+	if !exists || userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	user, err := h.service.Update(id, updates)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+func (h *UserHandler) DeleteUser(c *gin.Context) {
+	// Only admins can delete users
+	userRole, exists := c.Get("user_role")
+	if !exists || userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	if err := h.service.Delete(id); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }
 
 // OrganizationHandler handles organization operations
