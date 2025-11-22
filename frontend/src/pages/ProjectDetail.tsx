@@ -25,7 +25,7 @@ import {
   Stop as StopIcon,
   RestartAlt as RestartIcon,
 } from '@mui/icons-material';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
 import api from '../services/api';
@@ -34,7 +34,6 @@ import { useAppStore } from '../store/useAppStore';
 
 const ProjectDetail: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
-  const navigate = useNavigate();
   const { selectedProject, setSelectedProject } = useAppStore();
   const [project, setProject] = useState<Project | null>(selectedProject);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -45,6 +44,7 @@ const ProjectDetail: React.FC = () => {
     if (projectId) {
       loadProjectDetails();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const loadProjectDetails = async () => {

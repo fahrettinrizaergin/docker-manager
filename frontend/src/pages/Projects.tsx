@@ -51,6 +51,7 @@ const Projects: React.FC = () => {
 
   useEffect(() => {
     loadProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOrganization]);
 
   const loadProjects = async () => {

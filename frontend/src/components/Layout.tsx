@@ -52,6 +52,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   useEffect(() => {
     loadOrganizations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -60,6 +61,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     } else {
       setProjects([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOrganization]);
 
   const loadOrganizations = async () => {
