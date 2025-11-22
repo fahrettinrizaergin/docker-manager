@@ -52,6 +52,12 @@ class ApiService {
           localStorage.removeItem('token');
           window.location.href = '/login';
         }
+        
+        // Handle network errors more gracefully
+        if (error.code === 'ERR_NETWORK') {
+          console.error('Network error: Cannot connect to API server at', API_URL);
+        }
+        
         return Promise.reject(error);
       }
     );
