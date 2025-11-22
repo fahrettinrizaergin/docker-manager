@@ -15,11 +15,13 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	orgRepo := repository.NewOrganizationRepository(db)
 	projectRepo := repository.NewProjectRepository(db)
 	appRepo := repository.NewApplicationRepository(db)
+	containerRepo := repository.NewContainerRepository(db)
 
 	// Initialize services
 	orgService := service.NewOrganizationService(orgRepo)
 	projectService := service.NewProjectService(projectRepo)
 	appService := service.NewApplicationService(appRepo)
+	containerService := service.NewContainerService(containerRepo)
 
 	router := gin.Default()
 
@@ -232,6 +234,22 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			{
 				activityHandler := NewActivityHandler(cfg)
 				activities.GET("", activityHandler.ListActivities)
+			}
+
+			// Container routes
+			containers := protected.Group("/containers")
+			{
+				containerHandler := NewContainerHandler(cfg, containerService)
+				containers.POST("", containerHandler.CreateContainer)
+				containers.GET("", containerHandler.ListContainers)
+				containers.GET("/:id", containerHandler.GetContainer)
+				containers.PUT("/:id", containerHandler.UpdateContainer)
+				containers.DELETE("/:id", containerHandler.DeleteContainer)
+
+				// Container actions
+				containers.POST("/:id/start", containerHandler.StartContainer)
+				containers.POST("/:id/stop", containerHandler.StopContainer)
+				containers.POST("/:id/restart", containerHandler.RestartContainer)
 			}
 		}
 
