@@ -3,10 +3,10 @@ package service
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/fahrettinrizaergin/docker-manager/internal/models"
 	"github.com/fahrettinrizaergin/docker-manager/internal/repository"
+	"github.com/fahrettinrizaergin/docker-manager/internal/utils"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -29,7 +29,7 @@ func (s *OrganizationService) Create(org *models.Organization) error {
 	}
 	if org.Slug == "" {
 		// Generate slug from name if not provided
-		org.Slug = generateSlug(org.Name)
+		org.Slug = utils.GenerateSlug(org.Name)
 	}
 	if org.OwnerID == uuid.Nil {
 		return errors.New("owner ID is required")
@@ -157,18 +157,4 @@ func (s *OrganizationService) RemoveMember(orgID, userID uuid.UUID) error {
 // GetMembers retrieves all members of an organization
 func (s *OrganizationService) GetMembers(orgID uuid.UUID) ([]models.User, error) {
 	return s.repo.GetMembers(orgID)
-}
-
-// generateSlug creates a URL-friendly slug from a string
-func generateSlug(s string) string {
-	s = strings.ToLower(s)
-	s = strings.ReplaceAll(s, " ", "-")
-	// Remove special characters, keep only alphanumeric and hyphens
-	var result strings.Builder
-	for _, r := range s {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
-			result.WriteRune(r)
-		}
-	}
-	return result.String()
 }

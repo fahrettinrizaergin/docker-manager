@@ -6,6 +6,7 @@ import (
 
 	"github.com/fahrettinrizaergin/docker-manager/internal/models"
 	"github.com/fahrettinrizaergin/docker-manager/internal/repository"
+	"github.com/fahrettinrizaergin/docker-manager/internal/utils"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -28,7 +29,7 @@ func (s *ProjectService) Create(project *models.Project) error {
 	}
 	if project.Slug == "" {
 		// Generate slug from name if not provided
-		project.Slug = generateSlug(project.Name)
+		project.Slug = utils.GenerateSlug(project.Name)
 	}
 	if project.OrganizationID == uuid.Nil {
 		return errors.New("organization ID is required")
@@ -211,7 +212,7 @@ func (s *ProjectService) CreateEnvironment(env *models.Environment) error {
 	}
 	if env.Slug == "" {
 		// Generate slug from name if not provided
-		env.Slug = generateSlug(env.Name)
+		env.Slug = utils.GenerateSlug(env.Name)
 	}
 	if env.ProjectID == uuid.Nil {
 		return errors.New("project ID is required")

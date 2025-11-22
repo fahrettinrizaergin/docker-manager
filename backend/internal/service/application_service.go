@@ -6,6 +6,7 @@ import (
 
 	"github.com/fahrettinrizaergin/docker-manager/internal/models"
 	"github.com/fahrettinrizaergin/docker-manager/internal/repository"
+	"github.com/fahrettinrizaergin/docker-manager/internal/utils"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -28,7 +29,7 @@ func (s *ApplicationService) Create(app *models.Application) error {
 	}
 	if app.Slug == "" {
 		// Generate slug from name if not provided
-		app.Slug = generateSlug(app.Name)
+		app.Slug = utils.GenerateSlug(app.Name)
 	}
 	if app.ProjectID == uuid.Nil {
 		return errors.New("project ID is required")
