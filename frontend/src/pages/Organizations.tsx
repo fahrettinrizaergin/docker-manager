@@ -25,7 +25,6 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  People as PeopleIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
