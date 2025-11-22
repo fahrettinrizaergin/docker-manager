@@ -6,7 +6,7 @@ vendor
 dist
 build
 bin
-server
+backend/server
 
 # Environment variables
 .env

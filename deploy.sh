@@ -1,6 +1,10 @@
 #!/bin/bash
 
-echo "Starting deployment with LOCAL changes..."
+echo "Starting deployment..."
+
+# Pull latest changes
+echo "Pulling latest changes..."
+git pull origin main || { echo "Git pull failed"; exit 1; }
 
 # Stop containers
 echo "Stopping containers..."
