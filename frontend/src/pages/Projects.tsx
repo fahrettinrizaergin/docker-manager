@@ -191,7 +191,7 @@ const Projects: React.FC = () => {
                   <TableCell>Slug</TableCell>
                   <TableCell>Description</TableCell>
                   <TableCell>Status</TableCell>
-                  <TableCell align="center">Actions</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -214,7 +214,7 @@ const Projects: React.FC = () => {
                           size="small"
                         />
                       </TableCell>
-                      <TableCell align="center">
+                      <TableCell align="right">
                         <IconButton
                           size="small"
                           color="info"

@@ -78,11 +78,27 @@ const ProjectDetail: React.FC = () => {
     }
   };
 
+  const refreshContainers = async () => {
+    try {
+      const appsResponse = await api.getApplications({ project_id: projectId });
+      const apps = appsResponse.data || [];
+      
+      const containerPromises = apps.map((app: Application) => 
+        api.getContainers({ application_id: app.id })
+      );
+      const containerResponses = await Promise.all(containerPromises);
+      const allContainers = containerResponses.flatMap((res) => res.data || []);
+      setContainers(allContainers);
+    } catch (error: any) {
+      console.error('Failed to refresh containers:', error);
+    }
+  };
+
   const handleStartContainer = async (id: string) => {
     try {
       await api.startContainer(id);
       toast.success('Container started successfully');
-      loadProjectDetails();
+      refreshContainers();
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to start container');
     }
@@ -92,7 +108,7 @@ const ProjectDetail: React.FC = () => {
     try {
       await api.stopContainer(id);
       toast.success('Container stopped successfully');
-      loadProjectDetails();
+      refreshContainers();
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to stop container');
     }
@@ -102,7 +118,7 @@ const ProjectDetail: React.FC = () => {
     try {
       await api.restartContainer(id);
       toast.success('Container restarted successfully');
-      loadProjectDetails();
+      refreshContainers();
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to restart container');
     }
