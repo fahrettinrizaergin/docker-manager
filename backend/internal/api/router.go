@@ -17,6 +17,7 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	projectRepo := repository.NewProjectRepository(db)
 	appRepo := repository.NewApplicationRepository(db)
 	containerRepo := repository.NewContainerRepository(db)
+	permissionRepo := repository.NewPermissionRepository(db)
 
 	// Initialize services
 	userService := service.NewUserService(userRepo)
@@ -24,6 +25,7 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	projectService := service.NewProjectService(projectRepo)
 	appService := service.NewApplicationService(appRepo)
 	containerService := service.NewContainerService(containerRepo)
+	permissionService := service.NewPermissionService(permissionRepo)
 
 	router := gin.Default()
 
@@ -261,6 +263,19 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 				containers.POST("/:id/start", containerHandler.StartContainer)
 				containers.POST("/:id/stop", containerHandler.StopContainer)
 				containers.POST("/:id/restart", containerHandler.RestartContainer)
+			}
+
+			// Permission routes
+			permissions := protected.Group("/permissions")
+			{
+				permissionHandler := NewPermissionHandler(cfg, permissionService)
+				permissions.POST("/grant", permissionHandler.GrantPermission)
+				permissions.POST("/revoke", permissionHandler.RevokePermission)
+				permissions.GET("/users/:userId", permissionHandler.GetUserPermissions)
+				permissions.GET("/resources", permissionHandler.GetResourcePermissions)
+				permissions.GET("/users/:userId/resources", permissionHandler.GetUserResources)
+				permissions.PUT("/:id", permissionHandler.UpdatePermission)
+				permissions.DELETE("/:id", permissionHandler.DeletePermission)
 			}
 		}
 

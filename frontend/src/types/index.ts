@@ -166,6 +166,29 @@ export interface Container {
   application?: Application;
 }
 
+// Permission types
+export interface UserPermission {
+  id: string;
+  user_id: string;
+  resource_type: 'organization' | 'project' | 'application' | 'container';
+  resource_id: string;
+  permissions: string; // JSON array
+  granted_by: string;
+  granted_at: string;
+  expires_at?: string;
+  created_at: string;
+  updated_at: string;
+  user?: User;
+}
+
+export interface PermissionSet {
+  read: boolean;
+  write: boolean;
+  delete: boolean;
+  deploy: boolean;
+  manage: boolean;
+}
+
 // API Response types
 export interface PaginatedResponse<T> {
   data: T[];

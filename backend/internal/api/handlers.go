@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/fahrettinrizaergin/docker-manager/internal/auth"
 	"github.com/fahrettinrizaergin/docker-manager/internal/config"
@@ -1529,4 +1530,280 @@ func (h *ContainerHandler) RestartContainer(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Container restarted successfully"})
+}
+
+// PermissionHandler handles permission operations
+type PermissionHandler struct {
+	cfg     *config.Config
+	service *service.PermissionService
+}
+
+func NewPermissionHandler(cfg *config.Config, svc *service.PermissionService) *PermissionHandler {
+	return &PermissionHandler{
+		cfg:     cfg,
+		service: svc,
+	}
+}
+
+func (h *PermissionHandler) GrantPermission(c *gin.Context) {
+	// Only admins can grant permissions
+	userRole, exists := c.Get("user_role")
+	if !exists || userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	var req struct {
+		UserID       string   `json:"user_id" binding:"required"`
+		ResourceType string   `json:"resource_type" binding:"required"`
+		ResourceID   string   `json:"resource_id" binding:"required"`
+		Permissions  []string `json:"permissions" binding:"required"`
+		ExpiresAt    *string  `json:"expires_at"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	resourceID, err := uuid.Parse(req.ResourceID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resource ID"})
+		return
+	}
+
+	grantedByID, _ := c.Get("user_id")
+
+	var expiresAt *time.Time
+	if req.ExpiresAt != nil {
+		t, err := time.Parse(time.RFC3339, *req.ExpiresAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expires_at format"})
+			return
+		}
+		expiresAt = &t
+	}
+
+	err = h.service.GrantPermission(userID, resourceID, req.ResourceType, req.Permissions, grantedByID.(uuid.UUID), expiresAt)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Permission granted successfully"})
+}
+
+func (h *PermissionHandler) RevokePermission(c *gin.Context) {
+	// Only admins can revoke permissions
+	userRole, exists := c.Get("user_role")
+	if !exists || userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	var req struct {
+		UserID       string `json:"user_id" binding:"required"`
+		ResourceType string `json:"resource_type" binding:"required"`
+		ResourceID   string `json:"resource_id" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	resourceID, err := uuid.Parse(req.ResourceID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resource ID"})
+		return
+	}
+
+	err = h.service.RevokePermission(userID, req.ResourceType, resourceID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to revoke permission"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Permission revoked successfully"})
+}
+
+func (h *PermissionHandler) GetUserPermissions(c *gin.Context) {
+	userID, err := uuid.Parse(c.Param("userId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Users can only view their own permissions unless they are admin
+	currentUserID, _ := c.Get("user_id")
+	userRole, _ := c.Get("user_role")
+	if currentUserID.(uuid.UUID) != userID && userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	permissions, err := h.service.GetUserPermissions(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch permissions"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": permissions})
+}
+
+func (h *PermissionHandler) GetResourcePermissions(c *gin.Context) {
+	// Only admins can view resource permissions
+	userRole, exists := c.Get("user_role")
+	if !exists || userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	resourceType := c.Query("resource_type")
+	resourceIDStr := c.Query("resource_id")
+
+	if resourceType == "" || resourceIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "resource_type and resource_id are required"})
+		return
+	}
+
+	resourceID, err := uuid.Parse(resourceIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resource ID"})
+		return
+	}
+
+	permissions, err := h.service.GetResourcePermissions(resourceType, resourceID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch permissions"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": permissions})
+}
+
+func (h *PermissionHandler) GetUserResources(c *gin.Context) {
+	userID, err := uuid.Parse(c.Param("userId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Users can only view their own resources unless they are admin
+	currentUserID, _ := c.Get("user_id")
+	userRole, _ := c.Get("user_role")
+	if currentUserID.(uuid.UUID) != userID && userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	resourceType := c.Query("type")
+	if resourceType == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "type parameter is required"})
+		return
+	}
+
+	var resourceIDs []uuid.UUID
+	switch resourceType {
+	case models.ResourceOrganization:
+		resourceIDs, err = h.service.GetUserOrganizations(userID)
+	case models.ResourceProject:
+		resourceIDs, err = h.service.GetUserProjects(userID)
+	case models.ResourceApplication:
+		resourceIDs, err = h.service.GetUserApplications(userID)
+	case models.ResourceContainer:
+		resourceIDs, err = h.service.GetUserContainers(userID)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resource type"})
+		return
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user resources"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": resourceIDs})
+}
+
+func (h *PermissionHandler) UpdatePermission(c *gin.Context) {
+	// Only admins can update permissions
+	userRole, exists := c.Get("user_role")
+	if !exists || userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid permission ID"})
+		return
+	}
+
+	var req struct {
+		Permissions []string `json:"permissions" binding:"required"`
+		ExpiresAt   *string  `json:"expires_at"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	var expiresAt *time.Time
+	if req.ExpiresAt != nil {
+		t, err := time.Parse(time.RFC3339, *req.ExpiresAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expires_at format"})
+			return
+		}
+		expiresAt = &t
+	}
+
+	err = h.service.UpdatePermission(id, req.Permissions, expiresAt)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Permission not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Permission updated successfully"})
+}
+
+func (h *PermissionHandler) DeletePermission(c *gin.Context) {
+	// Only admins can delete permissions
+	userRole, exists := c.Get("user_role")
+	if !exists || userRole.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		return
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid permission ID"})
+		return
+	}
+
+	err = h.service.DeletePermission(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete permission"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Permission deleted successfully"})
 }

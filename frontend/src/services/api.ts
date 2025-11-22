@@ -253,6 +253,56 @@ class ApiService {
     return response.data;
   }
 
+  // Permissions
+  async grantPermission(data: {
+    user_id: string;
+    resource_type: string;
+    resource_id: string;
+    permissions: string[];
+    expires_at?: string;
+  }) {
+    const response = await this.client.post('/permissions/grant', data);
+    return response.data;
+  }
+
+  async revokePermission(data: {
+    user_id: string;
+    resource_type: string;
+    resource_id: string;
+  }) {
+    const response = await this.client.post('/permissions/revoke', data);
+    return response.data;
+  }
+
+  async getUserPermissions(userId: string) {
+    const response = await this.client.get(`/permissions/users/${userId}`);
+    return response.data;
+  }
+
+  async getResourcePermissions(resourceType: string, resourceId: string) {
+    const response = await this.client.get('/permissions/resources', {
+      params: { resource_type: resourceType, resource_id: resourceId }
+    });
+    return response.data;
+  }
+
+  async getUserResources(userId: string, type: string) {
+    const response = await this.client.get(`/permissions/users/${userId}/resources`, {
+      params: { type }
+    });
+    return response.data;
+  }
+
+  async updatePermission(id: string, data: { permissions: string[]; expires_at?: string }) {
+    const response = await this.client.put(`/permissions/${id}`, data);
+    return response.data;
+  }
+
+  async deletePermission(id: string) {
+    const response = await this.client.delete(`/permissions/${id}`);
+    return response.data;
+  }
+
   // Nodes
   async getNodes() {
     const response = await this.client.get('/nodes');
