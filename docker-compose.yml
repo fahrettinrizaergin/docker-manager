@@ -71,8 +71,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      REACT_APP_API_URL: http://172.19.0.5:8080
-      REACT_APP_WS_URL: ws://172.19.0.5:8080
+      REACT_APP_API_URL: http://91.98.86.215:8080
+      REACT_APP_WS_URL: ws://91.98.86.215:8080
     volumes:
       - ./frontend:/app
       - /app/node_modules
