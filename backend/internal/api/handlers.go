@@ -1,8 +1,17 @@
 package api
 
 import (
+	"errors"
+	"net/http"
+	"strconv"
+
 	"github.com/fahrettinrizaergin/docker-manager/internal/config"
+	"github.com/fahrettinrizaergin/docker-manager/internal/constants"
+	"github.com/fahrettinrizaergin/docker-manager/internal/models"
+	"github.com/fahrettinrizaergin/docker-manager/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // Handler stubs - these will return placeholder responses
@@ -68,43 +77,175 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 
 // OrganizationHandler handles organization operations
 type OrganizationHandler struct {
-	cfg *config.Config
+	cfg     *config.Config
+	service *service.OrganizationService
 }
 
-func NewOrganizationHandler(cfg *config.Config) *OrganizationHandler {
-	return &OrganizationHandler{cfg: cfg}
+func NewOrganizationHandler(cfg *config.Config, svc *service.OrganizationService) *OrganizationHandler {
+	return &OrganizationHandler{
+		cfg:     cfg,
+		service: svc,
+	}
 }
 
 func (h *OrganizationHandler) CreateOrganization(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "CreateOrganization endpoint - not implemented"})
+	var req models.Organization
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	if err := h.service.Create(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, req)
 }
 
 func (h *OrganizationHandler) ListOrganizations(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "ListOrganizations endpoint - not implemented"})
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	orgs, total, err := h.service.List(page, pageSize)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch organizations"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":        orgs,
+		"total":       total,
+		"page":        page,
+		"page_size":   pageSize,
+		"total_pages": (total + int64(pageSize) - 1) / int64(pageSize),
+	})
 }
 
 func (h *OrganizationHandler) GetOrganization(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "GetOrganization endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		return
+	}
+
+	org, err := h.service.GetByID(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch organization"})
+		return
+	}
+
+	c.JSON(http.StatusOK, org)
 }
 
 func (h *OrganizationHandler) UpdateOrganization(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "UpdateOrganization endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		return
+	}
+
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	org, err := h.service.Update(id, updates)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, org)
 }
 
 func (h *OrganizationHandler) DeleteOrganization(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "DeleteOrganization endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		return
+	}
+
+	if err := h.service.Delete(id); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete organization"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Organization deleted successfully"})
 }
 
 func (h *OrganizationHandler) ListMembers(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "ListMembers endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		return
+	}
+
+	members, err := h.service.GetMembers(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch members"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": members})
 }
 
 func (h *OrganizationHandler) AddMember(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "AddMember endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		return
+	}
+
+	var req struct {
+		UserID uuid.UUID `json:"user_id" binding:"required"`
+		Role   string    `json:"role" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	if err := h.service.AddMember(id, req.UserID, req.Role); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Member added successfully"})
 }
 
 func (h *OrganizationHandler) RemoveMember(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "RemoveMember endpoint - not implemented"})
+	orgID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		return
+	}
+
+	userID, err := uuid.Parse(c.Param("userId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	if err := h.service.RemoveMember(orgID, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove member"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Member removed successfully"})
 }
 
 // TeamHandler handles team operations
@@ -146,100 +287,443 @@ func (h *TeamHandler) RemoveMember(c *gin.Context) {
 
 // ProjectHandler handles project operations
 type ProjectHandler struct {
-	cfg *config.Config
+	cfg     *config.Config
+	service *service.ProjectService
 }
 
-func NewProjectHandler(cfg *config.Config) *ProjectHandler {
-	return &ProjectHandler{cfg: cfg}
+func NewProjectHandler(cfg *config.Config, svc *service.ProjectService) *ProjectHandler {
+	return &ProjectHandler{
+		cfg:     cfg,
+		service: svc,
+	}
 }
 
 func (h *ProjectHandler) CreateProject(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "CreateProject endpoint - not implemented"})
+	var req models.Project
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	if err := h.service.Create(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, req)
 }
 
 func (h *ProjectHandler) ListProjects(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "ListProjects endpoint - not implemented"})
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	orgIDStr := c.Query("organization_id")
+
+	var projects []models.Project
+	var total int64
+	var err error
+
+	if orgIDStr != "" {
+		orgID, err := uuid.Parse(orgIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+			return
+		}
+		projects, total, err = h.service.ListByOrganizationID(orgID, page, pageSize)
+	} else {
+		projects, total, err = h.service.List(page, pageSize)
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch projects"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":        projects,
+		"total":       total,
+		"page":        page,
+		"page_size":   pageSize,
+		"total_pages": (total + int64(pageSize) - 1) / int64(pageSize),
+	})
 }
 
 func (h *ProjectHandler) GetProject(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "GetProject endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+
+	project, err := h.service.GetByID(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch project"})
+		return
+	}
+
+	c.JSON(http.StatusOK, project)
 }
 
 func (h *ProjectHandler) UpdateProject(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "UpdateProject endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	project, err := h.service.Update(id, updates)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, project)
 }
 
 func (h *ProjectHandler) DeleteProject(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "DeleteProject endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+
+	if err := h.service.Delete(id); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete project"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Project deleted successfully"})
 }
 
 func (h *ProjectHandler) CreateFolder(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "CreateFolder endpoint - not implemented"})
+	projectID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+
+	var req models.Folder
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+	req.ProjectID = projectID
+
+	if err := h.service.CreateFolder(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, req)
 }
 
 func (h *ProjectHandler) ListFolders(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "ListFolders endpoint - not implemented"})
+	projectID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+
+	folders, err := h.service.ListFolders(projectID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch folders"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": folders})
 }
 
 func (h *ProjectHandler) UpdateFolder(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "UpdateFolder endpoint - not implemented"})
+	folderID, err := uuid.Parse(c.Param("folderId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid folder ID"})
+		return
+	}
+
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	folder, err := h.service.UpdateFolder(folderID, updates)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Folder not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, folder)
 }
 
 func (h *ProjectHandler) DeleteFolder(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "DeleteFolder endpoint - not implemented"})
+	folderID, err := uuid.Parse(c.Param("folderId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid folder ID"})
+		return
+	}
+
+	if err := h.service.DeleteFolder(folderID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Folder not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete folder"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Folder deleted successfully"})
 }
 
 func (h *ProjectHandler) CreateEnvironment(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "CreateEnvironment endpoint - not implemented"})
+	projectID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+
+	var req models.Environment
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+	req.ProjectID = projectID
+
+	if err := h.service.CreateEnvironment(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, req)
 }
 
 func (h *ProjectHandler) ListEnvironments(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "ListEnvironments endpoint - not implemented"})
+	projectID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+
+	environments, err := h.service.ListEnvironments(projectID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch environments"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": environments})
 }
 
 // ApplicationHandler handles application operations
 type ApplicationHandler struct {
-	cfg *config.Config
+	cfg     *config.Config
+	service *service.ApplicationService
 }
 
-func NewApplicationHandler(cfg *config.Config) *ApplicationHandler {
-	return &ApplicationHandler{cfg: cfg}
+func NewApplicationHandler(cfg *config.Config, svc *service.ApplicationService) *ApplicationHandler {
+	return &ApplicationHandler{
+		cfg:     cfg,
+		service: svc,
+	}
 }
 
 func (h *ApplicationHandler) CreateApplication(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "CreateApplication endpoint - not implemented"})
+	var req models.Application
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	if err := h.service.Create(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, req)
 }
 
 func (h *ApplicationHandler) ListApplications(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "ListApplications endpoint - not implemented"})
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	projectIDStr := c.Query("project_id")
+
+	var apps []models.Application
+	var total int64
+	var err error
+
+	if projectIDStr != "" {
+		projectID, err := uuid.Parse(projectIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+			return
+		}
+		apps, total, err = h.service.ListByProjectID(projectID, page, pageSize)
+	} else {
+		apps, total, err = h.service.List(page, pageSize)
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch applications"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":        apps,
+		"total":       total,
+		"page":        page,
+		"page_size":   pageSize,
+		"total_pages": (total + int64(pageSize) - 1) / int64(pageSize),
+	})
 }
 
 func (h *ApplicationHandler) GetApplication(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "GetApplication endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		return
+	}
+
+	app, err := h.service.GetByID(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch application"})
+		return
+	}
+
+	c.JSON(http.StatusOK, app)
 }
 
 func (h *ApplicationHandler) UpdateApplication(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "UpdateApplication endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		return
+	}
+
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	app, err := h.service.Update(id, updates)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, app)
 }
 
 func (h *ApplicationHandler) DeleteApplication(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "DeleteApplication endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		return
+	}
+
+	if err := h.service.Delete(id); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete application"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Application deleted successfully"})
 }
 
 func (h *ApplicationHandler) StartApplication(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "StartApplication endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		return
+	}
+
+	if err := h.service.UpdateStatus(id, constants.ApplicationStatusRunning); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start application"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Application started successfully"})
 }
 
 func (h *ApplicationHandler) StopApplication(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "StopApplication endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		return
+	}
+
+	if err := h.service.UpdateStatus(id, constants.ApplicationStatusStopped); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stop application"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Application stopped successfully"})
 }
 
 func (h *ApplicationHandler) RestartApplication(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "RestartApplication endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		return
+	}
+
+	// First stop, then start
+	if err := h.service.UpdateStatus(id, constants.ApplicationStatusStopped); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stop application"})
+		return
+	}
+
+	if err := h.service.UpdateStatus(id, constants.ApplicationStatusRunning); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start application"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Application restarted successfully"})
 }
 
 func (h *ApplicationHandler) DeployApplication(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "DeployApplication endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		return
+	}
+
+	if err := h.service.UpdateStatus(id, constants.ApplicationStatusDeploying); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to deploy application"})
+		return
+	}
+
+	c.JSON(http.StatusAccepted, gin.H{"message": "Deployment started"})
 }
 
 func (h *ApplicationHandler) RollbackApplication(c *gin.Context) {
@@ -247,19 +731,86 @@ func (h *ApplicationHandler) RollbackApplication(c *gin.Context) {
 }
 
 func (h *ApplicationHandler) ListEnvVars(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "ListEnvVars endpoint - not implemented"})
+	appID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		return
+	}
+
+	envVars, err := h.service.ListEnvVars(appID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch environment variables"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": envVars})
 }
 
 func (h *ApplicationHandler) CreateEnvVar(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "CreateEnvVar endpoint - not implemented"})
+	appID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		return
+	}
+
+	var req models.EnvVar
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+	req.ApplicationID = &appID
+
+	if err := h.service.CreateEnvVar(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, req)
 }
 
 func (h *ApplicationHandler) UpdateEnvVar(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "UpdateEnvVar endpoint - not implemented"})
+	envID, err := uuid.Parse(c.Param("envId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid environment variable ID"})
+		return
+	}
+
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	envVar, err := h.service.UpdateEnvVar(envID, updates)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Environment variable not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, envVar)
 }
 
 func (h *ApplicationHandler) DeleteEnvVar(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "DeleteEnvVar endpoint - not implemented"})
+	envID, err := uuid.Parse(c.Param("envId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid environment variable ID"})
+		return
+	}
+
+	if err := h.service.DeleteEnvVar(envID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Environment variable not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete environment variable"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Environment variable deleted successfully"})
 }
 
 func (h *ApplicationHandler) GetLogs(c *gin.Context) {

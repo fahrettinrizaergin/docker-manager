@@ -21,8 +21,11 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
+	// Get database instance
+	db := database.GetDB()
+
 	// Setup router
-	router := api.SetupRouter(cfg)
+	router := api.SetupRouter(cfg, db)
 
 	// Start server
 	addr := fmt.Sprintf("%s:%d", cfg.App.Host, cfg.App.Port)

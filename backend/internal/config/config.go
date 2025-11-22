@@ -68,12 +68,12 @@ type TraefikConfig struct {
 }
 
 type StorageConfig struct {
-	Type       string
-	Path       string
-	S3Endpoint string
+	Type        string
+	Path        string
+	S3Endpoint  string
 	S3AccessKey string
 	S3SecretKey string
-	S3Bucket   string
+	S3Bucket    string
 }
 
 type CloudflareConfig struct {
@@ -112,12 +112,12 @@ type GiteaConfig struct {
 }
 
 type SecurityConfig struct {
-	TrivyEnabled    bool
-	TrivyServerURL  string
-	VaultEnabled    bool
-	VaultAddress    string
-	VaultToken      string
-	VaultPath       string
+	TrivyEnabled   bool
+	TrivyServerURL string
+	VaultEnabled   bool
+	VaultAddress   string
+	VaultToken     string
+	VaultPath      string
 }
 
 type MonitoringConfig struct {

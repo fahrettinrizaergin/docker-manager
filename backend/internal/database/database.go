@@ -17,7 +17,7 @@ var DB *gorm.DB
 // Initialize initializes the database connection
 func Initialize(cfg *config.Config) error {
 	var err error
-	
+
 	// Configure logger
 	logLevel := logger.Silent
 	if cfg.App.Env == "development" {
@@ -63,7 +63,7 @@ func Migrate() error {
 		&models.Team{},
 		&models.UserOrganization{},
 		&models.UserTeam{},
-		
+
 		// Project models
 		&models.Project{},
 		&models.Folder{},
@@ -71,7 +71,7 @@ func Migrate() error {
 		&models.Environment{},
 		&models.EnvVar{},
 		&models.TeamProject{},
-		
+
 		// Docker models
 		&models.Node{},
 		&models.Container{},
@@ -79,7 +79,7 @@ func Migrate() error {
 		&models.Network{},
 		&models.Image{},
 		&models.Registry{},
-		
+
 		// Deployment models
 		&models.Deployment{},
 		&models.DeploymentQueue{},
