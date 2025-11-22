@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: dockermanager-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dockermgr}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dockermgr_dev_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-dockermanager}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - docker-manager-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: dockermanager-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - docker-manager-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dockermanager-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-dockermgr}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dockermgr_dev_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-dockermanager}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      APP_ENV: development
+      APP_PORT: 8080
+      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_in_production}
+      FRONTEND_URL: http://localhost:3000
+      DOCKER_HOST: unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./backend:/app
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - docker-manager-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: dockermanager-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: http://localhost:8080
+      REACT_APP_WS_URL: ws://localhost:8080
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - docker-manager-network
+
+  traefik:
+    image: traefik:v2.10
+    container_name: dockermanager-traefik
+    restart: unless-stopped
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8081:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - docker-manager-network
+      - web
+
+networks:
+  docker-manager-network:
+    driver: bridge
+  web:
+    external: true
+    name: web
+
+volumes:
+  postgres_data:
+  redis_data:
