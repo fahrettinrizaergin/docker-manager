@@ -93,14 +93,18 @@ services:
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      - "--providers.file.filename=/etc/traefik/dynamic.yml"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--experimental.plugins.traefik-plugin-AdminAPI_WebUI.modulename=github.com/Miromani4/traefik-plugin-AdminAPI_WebUI"
+      - "--experimental.plugins.traefik-plugin-AdminAPI_WebUI.version=v1.3.1"
     ports:
       - "80:80"
       - "443:443"
       - "8081:8080"  # Traefik dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
     networks:
       - docker-manager-network
       - web
