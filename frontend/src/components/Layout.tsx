@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   AppBar,
@@ -12,13 +12,15 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
+  Select,
+  MenuItem,
+  FormControl,
+  CircularProgress,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
-  Business as BusinessIcon,
   Folder as FolderIcon,
-  Apps as AppsIcon,
   Storage as StorageIcon,
   CloudQueue as CloudQueueIcon,
   ViewModule as ViewModuleIcon,
@@ -28,6 +30,10 @@ import {
   ExploreOutlined as ExploreIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { useAppStore } from '../store/useAppStore';
+import api from '../services/api';
+import { Organization, Project } from '../types';
 
 const drawerWidth = 240;
 
@@ -37,14 +43,75 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [drawerOpen, setDrawerOpen] = useState(true);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(false);
   const navigate = useNavigate();
+  const { selectedOrganization, setSelectedOrganization, selectedProject, setSelectedProject } = useAppStore();
+
+  useEffect(() => {
+    loadOrganizations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (selectedOrganization) {
+      loadProjects(selectedOrganization.id);
+    } else {
+      setProjects([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOrganization]);
+
+  const loadOrganizations = async () => {
+    try {
+      setLoadingOrgs(true);
+      const response = await api.getOrganizations();
+      const orgs = response.data || [];
+      setOrganizations(orgs);
+      
+      // If no organization is selected, select the first one
+      if (!selectedOrganization && orgs.length > 0) {
+        setSelectedOrganization(orgs[0]);
+      }
+    } catch (error: any) {
+      console.error('Failed to load organizations:', error);
+      toast.error('Failed to load organizations');
+    } finally {
+      setLoadingOrgs(false);
+    }
+  };
+
+  const loadProjects = async (organizationId: string) => {
+    try {
+      setLoadingProjects(true);
+      const response = await api.getProjects({ organization_id: organizationId });
+      setProjects(response.data || []);
+    } catch (error: any) {
+      console.error('Failed to load projects:', error);
+      toast.error('Failed to load projects');
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
+
+  const handleOrganizationChange = (orgId: string) => {
+    const org = organizations.find((o) => o.id === orgId);
+    if (org) {
+      setSelectedOrganization(org);
+      setSelectedProject(null);
+    }
+  };
+
+  const handleProjectClick = (project: Project) => {
+    setSelectedProject(project);
+    navigate(`/projects/${project.id}`);
+  };
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Explorer', icon: <ExploreIcon />, path: '/explorer' },
-    { text: 'Organizations', icon: <BusinessIcon />, path: '/organizations' },
-    { text: 'Projects', icon: <FolderIcon />, path: '/projects' },
-    { text: 'Applications', icon: <AppsIcon />, path: '/applications' },
     { text: 'Nodes', icon: <StorageIcon />, path: '/nodes' },
     { text: 'Deployments', icon: <CloudQueueIcon />, path: '/deployments' },
     { text: 'Templates', icon: <ViewModuleIcon />, path: '/templates' },
@@ -68,9 +135,48 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" noWrap component="div" sx={{ mr: 3 }}>
             Docker Manager
           </Typography>
+          
+          {/* Organization Selector */}
+          <FormControl sx={{ minWidth: 200, mr: 2 }}>
+            <Select
+              value={selectedOrganization?.id || ''}
+              onChange={(e) => handleOrganizationChange(e.target.value)}
+              displayEmpty
+              size="small"
+              sx={{
+                color: 'white',
+                '.MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                },
+                '.MuiSvgIcon-root': {
+                  color: 'white',
+                },
+              }}
+            >
+              {loadingOrgs ? (
+                <MenuItem disabled>
+                  <CircularProgress size={20} />
+                </MenuItem>
+              ) : organizations.length === 0 ? (
+                <MenuItem value="">No organizations</MenuItem>
+              ) : (
+                organizations.map((org) => (
+                  <MenuItem key={org.id} value={org.id}>
+                    {org.name}
+                  </MenuItem>
+                ))
+              )}
+            </Select>
+          </FormControl>
+
+          <Box sx={{ flexGrow: 1 }} />
+          
           <IconButton color="inherit">
             <NotificationsIcon />
           </IconButton>
@@ -104,6 +210,56 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </ListItem>
             ))}
           </List>
+          
+          {/* Projects Section */}
+          {selectedOrganization && (
+            <>
+              <Divider />
+              <List>
+                <ListItem>
+                  <ListItemText 
+                    primary="Projects" 
+                    primaryTypographyProps={{ 
+                      variant: 'subtitle2', 
+                      color: 'text.secondary',
+                      fontWeight: 'bold',
+                    }} 
+                  />
+                </ListItem>
+                {loadingProjects ? (
+                  <ListItem>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                      <CircularProgress size={20} />
+                    </Box>
+                  </ListItem>
+                ) : projects.length === 0 ? (
+                  <ListItem>
+                    <ListItemText 
+                      secondary="No projects" 
+                      secondaryTypographyProps={{ 
+                        align: 'center' 
+                      }} 
+                    />
+                  </ListItem>
+                ) : (
+                  projects.map((project) => (
+                    <ListItem key={project.id} disablePadding>
+                      <ListItemButton 
+                        onClick={() => handleProjectClick(project)}
+                        selected={selectedProject?.id === project.id}
+                      >
+                        <ListItemIcon>
+                          <FolderIcon />
+                        </ListItemIcon>
+                        <ListItemText primary={project.name} />
+                      </ListItemButton>
+                    </ListItem>
+                  ))
+                )}
+              </List>
+            </>
+          )}
+          
           <Divider />
           <List>
             <ListItem disablePadding>

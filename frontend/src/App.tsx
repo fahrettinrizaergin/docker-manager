@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import Explorer from './pages/Explorer';
 import Organizations from './pages/Organizations';
 import Projects from './pages/Projects';
+import ProjectDetail from './pages/ProjectDetail';
 import Applications from './pages/Applications';
 import Nodes from './pages/Nodes';
 import Deployments from './pages/Deployments';
@@ -52,6 +53,7 @@ const App: React.FC = () => {
             <Route path="/explorer" element={<Explorer />} />
             <Route path="/organizations" element={<Organizations />} />
             <Route path="/projects" element={<Projects />} />
+            <Route path="/projects/:projectId" element={<ProjectDetail />} />
             <Route path="/applications" element={<Applications />} />
             <Route path="/nodes" element={<Nodes />} />
             <Route path="/deployments" element={<Deployments />} />

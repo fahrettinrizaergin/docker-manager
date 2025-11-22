@@ -25,13 +25,18 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  Visibility as ViewIcon,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { Project } from '../types';
+import { useAppStore } from '../store/useAppStore';
 
 const Projects: React.FC = () => {
+  const navigate = useNavigate();
+  const { selectedOrganization, setSelectedProject } = useAppStore();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
@@ -46,12 +51,17 @@ const Projects: React.FC = () => {
 
   useEffect(() => {
     loadProjects();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOrganization]);
 
   const loadProjects = async () => {
     try {
       setLoading(true);
-      const response = await api.getProjects();
+      if (!selectedOrganization) {
+        setProjects([]);
+        return;
+      }
+      const response = await api.getProjects({ organization_id: selectedOrganization.id });
       setProjects(response.data || []);
     } catch (error: any) {
       toast.error('Failed to load projects');
@@ -59,6 +69,11 @@ const Projects: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleViewProject = (project: Project) => {
+    setSelectedProject(project);
+    navigate(`/projects/${project.id}`);
   };
 
   const handleOpenDialog = (project?: Project) => {
@@ -77,7 +92,7 @@ const Projects: React.FC = () => {
         name: '',
         slug: '',
         description: '',
-        organization_id: '',
+        organization_id: selectedOrganization?.id || '',
         status: 'active',
       });
     }
@@ -136,20 +151,34 @@ const Projects: React.FC = () => {
     <Layout>
       <Container maxWidth="xl">
         <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h4" component="h1">
-            <FolderIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-            Projects
-          </Typography>
+          <Box>
+            <Typography variant="h4" component="h1">
+              <FolderIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+              Projects
+            </Typography>
+            {selectedOrganization && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Organization: {selectedOrganization.name}
+              </Typography>
+            )}
+          </Box>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
+            disabled={!selectedOrganization}
           >
             Create Project
           </Button>
         </Box>
 
-        {loading ? (
+        {!selectedOrganization ? (
+          <Paper sx={{ p: 4, textAlign: 'center' }}>
+            <Typography variant="body1" color="text.secondary">
+              Please select an organization from the top bar to view projects
+            </Typography>
+          </Paper>
+        ) : loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
           </Box>
@@ -188,8 +217,17 @@ const Projects: React.FC = () => {
                       <TableCell align="right">
                         <IconButton
                           size="small"
+                          color="info"
+                          onClick={() => handleViewProject(project)}
+                          title="View Details"
+                        >
+                          <ViewIcon />
+                        </IconButton>
+                        <IconButton
+                          size="small"
                           color="primary"
                           onClick={() => handleOpenDialog(project)}
+                          title="Edit"
                         >
                           <EditIcon />
                         </IconButton>
@@ -197,6 +235,7 @@ const Projects: React.FC = () => {
                           size="small"
                           color="error"
                           onClick={() => handleDelete(project.id)}
+                          title="Delete"
                         >
                           <DeleteIcon />
                         </IconButton>
