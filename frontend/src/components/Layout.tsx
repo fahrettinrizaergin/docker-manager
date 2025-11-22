@@ -25,6 +25,7 @@ import {
   Settings as SettingsIcon,
   Notifications as NotificationsIcon,
   AccountCircle as AccountCircleIcon,
+  ExploreOutlined as ExploreIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -40,6 +41,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
+    { text: 'Explorer', icon: <ExploreIcon />, path: '/explorer' },
     { text: 'Organizations', icon: <BusinessIcon />, path: '/organizations' },
     { text: 'Projects', icon: <FolderIcon />, path: '/projects' },
     { text: 'Applications', icon: <AppsIcon />, path: '/applications' },
