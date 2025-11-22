@@ -1,6 +1,25 @@
 import axios, { AxiosInstance } from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+// Use relative URL in production (empty string) so nginx can proxy requests
+// Use localhost in development if REACT_APP_API_URL is not set
+const getApiUrl = () => {
+  const envUrl = process.env.REACT_APP_API_URL;
+  
+  // If explicitly set, use it
+  if (envUrl) {
+    return envUrl;
+  }
+  
+  // In production build, use empty string for relative URLs
+  if (process.env.NODE_ENV === 'production') {
+    return '';
+  }
+  
+  // Default to localhost for development
+  return 'http://localhost:8080';
+};
+
+const API_URL = getApiUrl();
 
 class ApiService {
   private client: AxiosInstance;

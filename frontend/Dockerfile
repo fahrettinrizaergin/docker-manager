@@ -13,6 +13,8 @@ RUN npm ci
 COPY . .
 
 # Build the app
+# Note: REACT_APP_API_URL is intentionally not set here
+# The app will use relative URLs in production, allowing nginx to proxy requests
 RUN npm run build
 
 # Production stage
