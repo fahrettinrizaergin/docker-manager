@@ -25,7 +25,7 @@ func (r *ContainerInstanceRepository) Create(container *models.ContainerInstance
 func (r *ContainerInstanceRepository) GetByID(id uuid.UUID) (*models.ContainerInstance, error) {
 	var container models.ContainerInstance
 	err := r.db.
-		Preload("Application").
+		Preload("Container").
 		Preload("Node").
 		First(&container, "id = ?", id).Error
 	if err != nil {
@@ -38,7 +38,7 @@ func (r *ContainerInstanceRepository) GetByID(id uuid.UUID) (*models.ContainerIn
 func (r *ContainerInstanceRepository) GetByContainerID(containerID string) (*models.ContainerInstance, error) {
 	var container models.ContainerInstance
 	err := r.db.
-		Preload("Application").
+		Preload("Container").
 		Preload("Node").
 		First(&container, "container_id = ?", containerID).Error
 	if err != nil {
@@ -59,7 +59,7 @@ func (r *ContainerInstanceRepository) List(limit, offset int) ([]models.Containe
 
 	// Get paginated results
 	err := r.db.
-		Preload("Application").
+		Preload("Container").
 		Preload("Node").
 		Limit(limit).Offset(offset).
 		Find(&containers).Error
@@ -74,7 +74,7 @@ func (r *ContainerInstanceRepository) List(limit, offset int) ([]models.Containe
 func (r *ContainerInstanceRepository) ListByApplicationID(appID uuid.UUID) ([]models.ContainerInstance, error) {
 	var containers []models.ContainerInstance
 	err := r.db.
-		Preload("Application").
+		Preload("Container").
 		Preload("Node").
 		Where("application_id = ?", appID).
 		Find(&containers).Error
@@ -88,7 +88,7 @@ func (r *ContainerInstanceRepository) ListByApplicationID(appID uuid.UUID) ([]mo
 func (r *ContainerInstanceRepository) ListByNodeID(nodeID uuid.UUID) ([]models.ContainerInstance, error) {
 	var containers []models.ContainerInstance
 	err := r.db.
-		Preload("Application").
+		Preload("Container").
 		Preload("Node").
 		Where("node_id = ?", nodeID).
 		Find(&containers).Error

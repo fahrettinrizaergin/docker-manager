@@ -292,8 +292,8 @@ const Permissions: React.FC = () => {
                     >
                       <MenuItem value="organization">Organization</MenuItem>
                       <MenuItem value="project">Project</MenuItem>
-                      <MenuItem value="application">Container</MenuItem>
                       <MenuItem value="container">Container</MenuItem>
+                      <MenuItem value="container_instance">Container Instance</MenuItem>
                     </Select>
                   </FormControl>
                   <TextField

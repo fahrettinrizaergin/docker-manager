@@ -23,7 +23,7 @@ class ApiService {
     this.client = axios.create({
       baseURL: API_URL,
       headers: {
-        'Content-Type': 'container/json',
+        'Content-Type': 'application/json',
       },
     });
 
