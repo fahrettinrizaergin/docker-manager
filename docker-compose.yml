@@ -47,7 +47,7 @@ services:
       APP_ENV: development
       APP_PORT: 8080
       JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_in_production}
-      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL: http://91.98.86.215
       DOCKER_HOST: unix:///var/run/docker.sock
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -71,8 +71,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      REACT_APP_API_URL: http://91.98.86.215:8080
-      REACT_APP_WS_URL: ws://91.98.86.215:8080
+      REACT_APP_API_URL: /api/v1
+      REACT_APP_WS_URL: /api/v1/ws
     volumes:
       - ./frontend:/app
       - /app/node_modules
