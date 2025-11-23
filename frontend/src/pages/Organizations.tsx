@@ -160,8 +160,8 @@ const Organizations: React.FC = () => {
                   organizations.map((org) => (
                     <TableRow key={org.id}>
                       <TableCell>{org.name}</TableCell>
-                      <TableCell>{org.slug}</TableCell>
-                      <TableCell>{org.description || '-'}</TableCell>
+                      <TableCell className=''>{org.slug}</TableCell>
+                      <TableCell className=''>{org.description || '-'}</TableCell>
                       <TableCell>
                         <Chip
                           label={org.is_active ? 'Active' : 'Inactive'}

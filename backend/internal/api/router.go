@@ -17,6 +17,7 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	projectRepo := repository.NewProjectRepository(db)
 	// containerInstanceRepo := repository.NewContainerInstanceRepository(db)
 	containerRepo := repository.NewContainerRepository(db)
+	nodeRepo := repository.NewNodeRepository(db)
 	permissionRepo := repository.NewPermissionRepository(db)
 
 	// Initialize services
@@ -25,6 +26,7 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	projectService := service.NewProjectService(projectRepo)
 	// containerInstanceService := service.NewContainerInstanceService(containerInstanceRepo)
 	containerService := service.NewContainerService(containerRepo)
+	nodeService := service.NewNodeService(nodeRepo)
 	permissionService := service.NewPermissionService(permissionRepo)
 
 	router := gin.Default()
@@ -172,7 +174,7 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			// Node routes
 			nodes := protected.Group("/nodes")
 			{
-				nodeHandler := NewNodeHandler(cfg)
+				nodeHandler := NewNodeHandler(cfg, nodeService)
 				nodes.POST("", nodeHandler.CreateNode)
 				nodes.GET("", nodeHandler.ListNodes)
 				nodes.GET("/:id", nodeHandler.GetNode)
@@ -180,6 +182,10 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 				nodes.DELETE("/:id", nodeHandler.DeleteNode)
 				nodes.POST("/:id/test", nodeHandler.TestConnection)
 				nodes.GET("/:id/stats", nodeHandler.GetStats)
+
+				// Actions
+				nodes.POST("/:id/prune", nodeHandler.Prune)
+				nodes.POST("/:id/redis/reload", nodeHandler.ReloadRedis)
 			}
 
 			// Deployment routes
@@ -256,7 +262,6 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 				dashboardHandler := NewDashboardHandler(cfg, userService, orgService, projectService, containerService, containerService)
 				dashboard.GET("/stats", dashboardHandler.GetStats)
 			}
-
 
 			// Permission routes
 			permissions := protected.Group("/permissions")

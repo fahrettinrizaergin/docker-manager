@@ -4,12 +4,12 @@ import axios, { AxiosInstance } from 'axios';
 // Use localhost in development if REACT_APP_API_URL is not set
 const getApiUrl = () => {
   const envUrl = process.env.REACT_APP_API_URL;
-  
+
   // If explicitly set, use it
   if (envUrl) {
     return envUrl;
   }
-  
+
   // Default to relative path /api/v1
   return '/api/v1';
 };
@@ -47,12 +47,12 @@ class ApiService {
           localStorage.removeItem('token');
           window.location.href = '/login';
         }
-        
+
         // Handle network errors more gracefully
         if (error.code === 'ERR_NETWORK') {
           console.error('Network error: Cannot connect to API server at', API_URL);
         }
-        
+
         return Promise.reject(error);
       }
     );
@@ -310,6 +310,31 @@ class ApiService {
 
   async createNode(data: any) {
     const response = await this.client.post('/nodes', data);
+    return response.data;
+  }
+
+  async updateNode(id: string, data: any) {
+    const response = await this.client.put(`/nodes/${id}`, data);
+    return response.data;
+  }
+
+  async deleteNode(id: string) {
+    const response = await this.client.delete(`/nodes/${id}`);
+    return response.data;
+  }
+
+  async testNodeConnection(id: string) {
+    const response = await this.client.post(`/nodes/${id}/test`);
+    return response.data;
+  }
+
+  async pruneNode(id: string, type: string) {
+    const response = await this.client.post(`/nodes/${id}/prune`, { type });
+    return response.data;
+  }
+
+  async reloadNodeRedis(id: string) {
+    const response = await this.client.post(`/nodes/${id}/redis/reload`);
     return response.data;
   }
 

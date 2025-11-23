@@ -1,0 +1,61 @@
+package repository
+
+import (
+	"github.com/fahrettinrizaergin/docker-manager/internal/models"
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
+
+// NodeRepository handles database operations for nodes
+type NodeRepository struct {
+	db *gorm.DB
+}
+
+// NewNodeRepository creates a new node repository
+func NewNodeRepository(db *gorm.DB) *NodeRepository {
+	return &NodeRepository{db: db}
+}
+
+// Create creates a new node
+func (r *NodeRepository) Create(node *models.Node) error {
+	return r.db.Create(node).Error
+}
+
+// GetByID retrieves a node by ID
+func (r *NodeRepository) GetByID(id uuid.UUID) (*models.Node, error) {
+	var node models.Node
+	err := r.db.First(&node, "id = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &node, nil
+}
+
+// List retrieves all nodes with pagination
+func (r *NodeRepository) List(limit, offset int) ([]models.Node, int64, error) {
+	var nodes []models.Node
+	var total int64
+
+	// Count total
+	if err := r.db.Model(&models.Node{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated results
+	err := r.db.Limit(limit).Offset(offset).Find(&nodes).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return nodes, total, nil
+}
+
+// Update updates a node
+func (r *NodeRepository) Update(node *models.Node) error {
+	return r.db.Save(node).Error
+}
+
+// Delete soft deletes a node
+func (r *NodeRepository) Delete(id uuid.UUID) error {
+	return r.db.Delete(&models.Node{}, "id = ?", id).Error
+}

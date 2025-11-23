@@ -109,6 +109,25 @@ func Seed() error {
 		}
 		log.Printf("Created default project: %s", defaultProject.Name)
 
+		// Create default local node
+		defaultNode := &models.Node{
+			ID:             uuid.New(),
+			OrganizationID: defaultOrg.ID,
+			Name:           "Local Node",
+			Host:           "unix:///var/run/docker.sock",
+			Description:    "Default local Docker node",
+			Status:         "unknown",
+			IsDefault:      true,
+			CreatedAt:      time.Now(),
+			UpdatedAt:      time.Now(),
+		}
+
+		if err := tx.Create(defaultNode).Error; err != nil {
+			log.Printf("Failed to create default node: %v", err)
+			return err
+		}
+		log.Printf("Created default node: %s", defaultNode.Name)
+
 		log.Println("Database seeding completed successfully")
 		log.Println("Default credentials:")
 		log.Println("  Email: admin@admin.com")

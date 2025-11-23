@@ -37,6 +37,7 @@ import {
   Person as PersonIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
+  Business as BusinessIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -230,8 +231,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-    { text: 'Nodes', icon: <StorageIcon />, path: '/nodes' },
-    { text: 'Templates', icon: <ViewModuleIcon />, path: '/templates' },
+    { text: 'Organizations', icon: <BusinessIcon />, path: '/organizations' },
+    { text: 'Nodes', icon: <StorageIcon />, path: '/nodes' }, 
   ];
 
   return (
@@ -259,40 +260,54 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {/* Organization Selector with Add/Delete buttons */}
           <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
             <FormControl sx={{ minWidth: 200 }}>
-              <Select
-                value={selectedOrganization?.id || ''}
-                onChange={(e) => handleOrganizationChange(e.target.value)}
-                displayEmpty
-                size="small"
-                sx={{
-                  color: 'white',
-                  '.MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'rgba(255, 255, 255, 0.3)',
-                  },
-                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'rgba(255, 255, 255, 0.5)',
-                  },
-                  '.MuiSvgIcon-root': {
-                    color: 'white',
-                  },
-                }}
-              >
-                {loadingOrgs ? (
-                  <MenuItem disabled>
-                    <CircularProgress size={20} />
-                  </MenuItem>
-                ) : organizations.length === 0 ? (
-                  <MenuItem value="">No organizations</MenuItem>
+              {
+                organizations.length === 0 && !loadingOrgs ? (
+                  <IconButton
+                    color="inherit"
+                    size="small"
+                    onClick={() => navigate('/organizations')}
+                    sx={{ ml: 1 }}
+                    title="Add Organization"
+                  >
+                    <AddIcon /> Add Organization
+                  </IconButton>
                 ) : (
-                  organizations.map((org) => (
-                    <MenuItem key={org.id} value={org.id}>
-                      {org.name}
-                    </MenuItem>
-                  ))
-                )}
-              </Select>
+                  <Select
+                    value={selectedOrganization?.id || ''}
+                    onChange={(e) => handleOrganizationChange(e.target.value)}
+                    displayEmpty
+                    size="small"
+                    sx={{
+                      color: 'white',
+                      '.MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                      },
+                      '.MuiSvgIcon-root': {
+                        color: 'white',
+                      },
+                    }}
+                  >
+                    {loadingOrgs ? (
+                      <MenuItem disabled>
+                        <CircularProgress size={20} />
+                      </MenuItem>
+                    ) : organizations.length === 0 ? (
+                      <MenuItem value="">No organizations</MenuItem>
+                    ) : (
+                      organizations.map((org) => (
+                        <MenuItem key={org.id} value={org.id}>
+                          {org.name}
+                        </MenuItem>
+                      ))
+                    )}
+                  </Select>
+                )
+              } 
             </FormControl>
-            <IconButton
+            {/* <IconButton
               color="inherit"
               size="small"
               onClick={handleOpenOrgDialog}
@@ -300,7 +315,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               title="Add Organization"
             >
               <AddIcon />
-            </IconButton>
+            </IconButton> */}
             {canDeleteOrganization && (
               <IconButton
                 color="inherit"
@@ -391,7 +406,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <ListItemText primary={item.text} />
                 </ListItemButton>
               </ListItem>
-            ))}
+            ))} 
+              <ListItem disablePadding>
+                <ListItemButton onClick={() => navigate('/settings')}>
+                  <ListItemIcon>
+                    <SettingsIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Settings" />
+                </ListItemButton>
+              </ListItem> 
           </List>
           
           {/* Projects Section */}
@@ -441,19 +464,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 )}
               </List>
             </>
-          )}
-          
-          <Divider />
-          <List>
-            <ListItem disablePadding>
-              <ListItemButton onClick={() => navigate('/settings')}>
-                <ListItemIcon>
-                  <SettingsIcon />
-                </ListItemIcon>
-                <ListItemText primary="Settings" />
-              </ListItemButton>
-            </ListItem>
-          </List>
+          )} 
         </Box>
       </Drawer>
 

@@ -417,33 +417,22 @@ const ProjectDetailEnhanced: React.FC = () => {
 
         {/* Project Summary */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} lg={6}>
             <Card>
               <CardContent>
                 <Typography variant="h6" color="primary">Containers</Typography>
-                <Typography variant="h3">{containers.length}</Typography>
+                <Typography variant="h4">{containers.length}</Typography>
                 <Typography variant="body2" color="text.secondary">
                   Total containers
                 </Typography>
               </CardContent>
             </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" color="primary">Containers</Typography>
-                <Typography variant="h3">{containers.length}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Total containers
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
+          </Grid> 
+          <Grid item xs={12} lg={6}>
             <Card>
               <CardContent>
                 <Typography variant="h6" color="primary">Running</Typography>
-                <Typography variant="h3">
+                <Typography variant="h4">
                   {containers.filter(c => c.status?.toLowerCase() === 'running').length}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">

@@ -37,7 +37,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      POSTGRES_HOST: postgres
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
       POSTGRES_PORT: 5432
       POSTGRES_USER: ${POSTGRES_USER:-dockermgr}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dockermgr_dev_pass}

@@ -144,12 +144,22 @@ func Load() (*Config, error) {
 	// Load .env file if it exists (for local development)
 	_ = godotenv.Load()
 
+	fmt.Println("-------------------")
+	fmt.Println(getEnv("POSTGRES_HOST", ""))
+	fmt.Println("-------------------")
+
 	config := &Config{
 		Database: DatabaseConfig{
-			Host:     getEnv("POSTGRES_HOST", "localhost"),
+			/* Host:     getEnv("POSTGRES_HOST", "localhost"),
 			Port:     getEnvAsInt("POSTGRES_PORT", 5432),
 			User:     getEnv("POSTGRES_USER", "dockermgr"),
 			Password: getEnv("POSTGRES_PASSWORD", ""),
+			Database: getEnv("POSTGRES_DB", "dockermanager"),
+			SSLMode:  getEnv("POSTGRES_SSLMODE", "disable"), */
+			Host:     getEnv("POSTGRES_HOST", "91.98.86.215"),
+			Port:     getEnvAsInt("POSTGRES_PORT", 5432),
+			User:     getEnv("POSTGRES_USER", "dockermgr"),
+			Password: getEnv("POSTGRES_PASSWORD", "dockermgr_dev_pass"),
 			Database: getEnv("POSTGRES_DB", "dockermanager"),
 			SSLMode:  getEnv("POSTGRES_SSLMODE", "disable"),
 		},

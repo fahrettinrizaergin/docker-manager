@@ -1224,39 +1224,170 @@ func (h *ContainerHandler) GetStats(c *gin.Context) {
 
 // NodeHandler handles node operations
 type NodeHandler struct {
-	cfg *config.Config
+	cfg     *config.Config
+	service *service.NodeService
 }
 
-func NewNodeHandler(cfg *config.Config) *NodeHandler {
-	return &NodeHandler{cfg: cfg}
+func NewNodeHandler(cfg *config.Config, svc *service.NodeService) *NodeHandler {
+	return &NodeHandler{
+		cfg:     cfg,
+		service: svc,
+	}
 }
 
 func (h *NodeHandler) CreateNode(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "CreateNode endpoint - not implemented"})
+	var req models.Node
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Set default status
+	req.Status = "unknown"
+
+	if err := h.service.Create(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, req)
 }
 
 func (h *NodeHandler) ListNodes(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "ListNodes endpoint - not implemented"})
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	nodes, total, err := h.service.List(pageSize, (page-1)*pageSize)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch nodes"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":        nodes,
+		"total":       total,
+		"page":        page,
+		"page_size":   pageSize,
+		"total_pages": (total + int64(pageSize) - 1) / int64(pageSize),
+	})
 }
 
 func (h *NodeHandler) GetNode(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "GetNode endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid node ID"})
+		return
+	}
+
+	node, err := h.service.Get(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Node not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch node"})
+		return
+	}
+
+	c.JSON(http.StatusOK, node)
 }
 
 func (h *NodeHandler) UpdateNode(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "UpdateNode endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid node ID"})
+		return
+	}
+
+	var req models.Node
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Ensure ID matches
+	req.ID = id
+
+	if err := h.service.Update(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, req)
 }
 
 func (h *NodeHandler) DeleteNode(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "DeleteNode endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid node ID"})
+		return
+	}
+
+	if err := h.service.Delete(id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete node"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Node deleted successfully"})
 }
 
 func (h *NodeHandler) TestConnection(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "TestConnection endpoint - not implemented"})
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid node ID"})
+		return
+	}
+
+	if err := h.service.Ping(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Connection failed", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Connection successful"})
 }
 
 func (h *NodeHandler) GetStats(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "GetStats endpoint - not implemented"})
+	// Placeholder for now, maybe return basic info
+	c.JSON(http.StatusOK, gin.H{"message": "Stats not implemented yet"})
+}
+
+func (h *NodeHandler) Prune(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid node ID"})
+		return
+	}
+
+	var req struct {
+		Type string `json:"type" binding:"required"` // images, containers, volumes, networks, builder, system
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	if err := h.service.Prune(c.Request.Context(), id, req.Type); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Prune failed", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Prune successful"})
+}
+
+func (h *NodeHandler) ReloadRedis(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid node ID"})
+		return
+	}
+
+	if err := h.service.ReloadRedis(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Redis reload failed", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Redis reloaded successfully"})
 }
 
 // DeploymentHandler handles deployment operations
@@ -1444,12 +1575,12 @@ func (h *ActivityHandler) ListActivities(c *gin.Context) {
 
 // DashboardHandler handles dashboard operations
 type DashboardHandler struct {
-	cfg               *config.Config
-	userService       *service.UserService
-	orgService        *service.OrganizationService
-	projectService    *service.ProjectService
-	appService        *service.ContainerService
-	containerService  *service.ContainerService
+	cfg              *config.Config
+	userService      *service.UserService
+	orgService       *service.OrganizationService
+	projectService   *service.ProjectService
+	appService       *service.ContainerService
+	containerService *service.ContainerService
 }
 
 func NewDashboardHandler(
@@ -1513,7 +1644,7 @@ func (h *DashboardHandler) GetStats(c *gin.Context) {
 	} else {
 		// Get user-specific stats
 		orgs, _ := h.userService.GetOrganizations(userID.(uuid.UUID))
-		
+
 		var totalProjects int64 = 0
 		var totalApps int64 = 0
 		var totalContainers int64 = 0
@@ -1525,7 +1656,7 @@ func (h *DashboardHandler) GetStats(c *gin.Context) {
 			if err == nil {
 				_, totalProjects, _ = h.projectService.ListByOrganizationID(orgID, 1, 1)
 				projects, _, _ := h.projectService.ListByOrganizationID(orgID, 1, 10000)
-				
+
 				for _, project := range projects {
 					_, projectApps, _ := h.appService.ListByProjectID(project.ID, 1, 10000)
 					totalApps += projectApps
