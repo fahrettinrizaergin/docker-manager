@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Fixed "ENOSPC: no space left on device" error during React development by disabling babel-loader cache in Docker environment
+
 ### Added
 - Initial project structure
 - Backend API with Go and Gin framework
