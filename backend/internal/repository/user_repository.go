@@ -113,3 +113,23 @@ func (r *UserRepository) GetTeams(userID uuid.UUID) ([]models.Team, error) {
 	}
 	return teams, nil
 }
+
+// CreatePasswordReset creates a password reset token
+func (r *UserRepository) CreatePasswordReset(reset *models.PasswordReset) error {
+	return r.db.Create(reset).Error
+}
+
+// GetPasswordResetByToken retrieves a password reset by token
+func (r *UserRepository) GetPasswordResetByToken(token string) (*models.PasswordReset, error) {
+	var reset models.PasswordReset
+	err := r.db.Where("token = ?", token).First(&reset).Error
+	if err != nil {
+		return nil, err
+	}
+	return &reset, nil
+}
+
+// UpdatePasswordReset updates a password reset record
+func (r *UserRepository) UpdatePasswordReset(reset *models.PasswordReset) error {
+	return r.db.Save(reset).Error
+}

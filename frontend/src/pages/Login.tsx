@@ -10,6 +10,7 @@ import {
   Alert,
   Tabs,
   Tab,
+  Link,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -140,6 +141,16 @@ const Login: React.FC = () => {
               >
                 {loading ? <CircularProgress size={24} /> : 'Sign In'}
               </Button>
+              <Box sx={{ textAlign: 'center' }}>
+                <Link
+                  component="button"
+                  variant="body2"
+                  onClick={() => navigate('/password-reset')}
+                  sx={{ cursor: 'pointer' }}
+                >
+                  Forgot password?
+                </Link>
+              </Box>
             </form>
           ) : (
             <form onSubmit={handleRegister}>

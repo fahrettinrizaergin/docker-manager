@@ -21,6 +21,16 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
+	// Run migrations
+	if err := database.Migrate(); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
+
+	// Run seeder to create default data
+	if err := database.Seed(); err != nil {
+		log.Printf("Warning: Failed to run seeder: %v", err)
+	}
+
 	// Get database instance
 	db := database.GetDB()
 

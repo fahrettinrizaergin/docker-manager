@@ -8,6 +8,7 @@ import 'react-toastify/dist/ReactToastify.css';
 // Pages
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
+import PasswordReset from './pages/PasswordReset';
 import Explorer from './pages/Explorer';
 import Organizations from './pages/Organizations';
 import Projects from './pages/Projects';
@@ -17,6 +18,9 @@ import Nodes from './pages/Nodes';
 import Deployments from './pages/Deployments';
 import Templates from './pages/Templates';
 import Settings from './pages/Settings';
+
+// Components
+import PrivateRoute from './components/PrivateRoute';
 
 // Create Material-UI theme
 const theme = createTheme({
@@ -48,17 +52,23 @@ const App: React.FC = () => {
         <CssBaseline />
         <Router>
           <Routes>
+            {/* Public routes */}
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/explorer" element={<Explorer />} />
-            <Route path="/organizations" element={<Organizations />} />
-            <Route path="/projects" element={<Projects />} />
-            <Route path="/projects/:projectId" element={<ProjectDetail />} />
-            <Route path="/applications" element={<Applications />} />
-            <Route path="/nodes" element={<Nodes />} />
-            <Route path="/deployments" element={<Deployments />} />
-            <Route path="/templates" element={<Templates />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/password-reset" element={<PasswordReset />} />
+            
+            {/* Protected routes */}
+            <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/explorer" element={<PrivateRoute><Explorer /></PrivateRoute>} />
+            <Route path="/organizations" element={<PrivateRoute><Organizations /></PrivateRoute>} />
+            <Route path="/projects" element={<PrivateRoute><Projects /></PrivateRoute>} />
+            <Route path="/projects/:projectId" element={<PrivateRoute><ProjectDetail /></PrivateRoute>} />
+            <Route path="/applications" element={<PrivateRoute><Applications /></PrivateRoute>} />
+            <Route path="/nodes" element={<PrivateRoute><Nodes /></PrivateRoute>} />
+            <Route path="/deployments" element={<PrivateRoute><Deployments /></PrivateRoute>} />
+            <Route path="/templates" element={<PrivateRoute><Templates /></PrivateRoute>} />
+            <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+            
+            {/* Catch all - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>

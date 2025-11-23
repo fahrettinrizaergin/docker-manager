@@ -51,6 +51,8 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			authHandler := NewAuthHandler(cfg, userService)
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
+			auth.POST("/password-reset/request", authHandler.RequestPasswordReset)
+			auth.POST("/password-reset/reset", authHandler.ResetPassword)
 
 			// OAuth callbacks
 			if cfg.VCS.GitLab.Enabled {
@@ -247,6 +249,13 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			{
 				activityHandler := NewActivityHandler(cfg)
 				activities.GET("", activityHandler.ListActivities)
+			}
+
+			// Dashboard routes
+			dashboard := protected.Group("/dashboard")
+			{
+				dashboardHandler := NewDashboardHandler(cfg, userService, orgService, projectService, appService, containerService)
+				dashboard.GET("/stats", dashboardHandler.GetStats)
 			}
 
 			// Container routes
