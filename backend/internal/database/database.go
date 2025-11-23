@@ -63,6 +63,10 @@ func Migrate() error {
 		&models.Team{},
 		&models.UserOrganization{},
 		&models.UserTeam{},
+		&models.PasswordReset{},
+
+		// Permission models
+		&models.UserPermission{},
 
 		// Project models
 		&models.Project{},

@@ -10,6 +10,11 @@ import {
   Alert,
   Tabs,
   Tab,
+  Link,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -30,6 +35,13 @@ const Login: React.FC = () => {
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerFirstName, setRegisterFirstName] = useState('');
   const [registerLastName, setRegisterLastName] = useState('');
+  
+  // Password reset
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [resetStep, setResetStep] = useState<'email' | 'token'>('email');
   
   const navigate = useNavigate();
 
@@ -73,6 +85,54 @@ const Login: React.FC = () => {
     } catch (err: any) {
       const errorMsg = err.response?.data?.error || 'Registration failed';
       setError(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRequestPasswordReset = async () => {
+    if (!resetEmail) {
+      toast.error('Please enter your email');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const response = await api.requestPasswordReset(resetEmail);
+      toast.success('Password reset instructions sent to your email');
+      // For development, show the token
+      if (response.token) {
+        setResetToken(response.token);
+        setResetStep('token');
+      } else {
+        setResetDialogOpen(false);
+        setResetEmail('');
+      }
+    } catch (err: any) {
+      toast.error('Failed to request password reset');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetToken || !newPassword) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await api.resetPassword(resetToken, newPassword);
+      toast.success('Password reset successfully! Please login with your new password.');
+      setResetDialogOpen(false);
+      setResetEmail('');
+      setResetToken('');
+      setNewPassword('');
+      setResetStep('email');
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to reset password';
       toast.error(errorMsg);
     } finally {
       setLoading(false);
@@ -140,6 +200,16 @@ const Login: React.FC = () => {
               >
                 {loading ? <CircularProgress size={24} /> : 'Sign In'}
               </Button>
+              <Box sx={{ textAlign: 'center' }}>
+                <Link
+                  component="button"
+                  variant="body2"
+                  onClick={() => setResetDialogOpen(true)}
+                  sx={{ cursor: 'pointer' }}
+                >
+                  Forgot password?
+                </Link>
+              </Box>
             </form>
           ) : (
             <form onSubmit={handleRegister}>
@@ -203,6 +273,72 @@ const Login: React.FC = () => {
               </Button>
             </form>
           )}
+
+          {/* Password Reset Dialog */}
+          <Dialog open={resetDialogOpen} onClose={() => setResetDialogOpen(false)} maxWidth="sm" fullWidth>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogContent>
+              {resetStep === 'email' ? (
+                <Box sx={{ pt: 2 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Enter your email address and we'll send you instructions to reset your password.
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    label="Email"
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    disabled={loading}
+                  />
+                </Box>
+              ) : (
+                <Box sx={{ pt: 2 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Enter the reset token sent to your email and your new password.
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    label="Reset Token"
+                    value={resetToken}
+                    onChange={(e) => setResetToken(e.target.value)}
+                    margin="normal"
+                    disabled={loading}
+                  />
+                  <TextField
+                    fullWidth
+                    label="New Password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    margin="normal"
+                    helperText="At least 8 characters"
+                    disabled={loading}
+                  />
+                </Box>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => {
+                setResetDialogOpen(false);
+                setResetStep('email');
+                setResetEmail('');
+                setResetToken('');
+                setNewPassword('');
+              }} disabled={loading}>
+                Cancel
+              </Button>
+              {resetStep === 'email' ? (
+                <Button onClick={handleRequestPasswordReset} variant="contained" disabled={loading}>
+                  {loading ? <CircularProgress size={24} /> : 'Send Reset Link'}
+                </Button>
+              ) : (
+                <Button onClick={handleResetPassword} variant="contained" disabled={loading}>
+                  {loading ? <CircularProgress size={24} /> : 'Reset Password'}
+                </Button>
+              )}
+            </DialogActions>
+          </Dialog>
         </Paper>
       </Box>
     </Container>

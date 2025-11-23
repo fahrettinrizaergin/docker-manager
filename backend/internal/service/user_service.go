@@ -179,3 +179,18 @@ func (s *UserService) UpdatePassword(id uuid.UUID, newPasswordHash string) error
 	user.PasswordHash = newPasswordHash
 	return s.repo.Update(user)
 }
+
+// CreatePasswordReset creates a password reset token
+func (s *UserService) CreatePasswordReset(reset *models.PasswordReset) error {
+	return s.repo.CreatePasswordReset(reset)
+}
+
+// GetPasswordResetByToken retrieves a password reset by token
+func (s *UserService) GetPasswordResetByToken(token string) (*models.PasswordReset, error) {
+	return s.repo.GetPasswordResetByToken(token)
+}
+
+// UpdatePasswordReset updates a password reset record
+func (s *UserService) UpdatePasswordReset(reset *models.PasswordReset) error {
+	return s.repo.UpdatePasswordReset(reset)
+}

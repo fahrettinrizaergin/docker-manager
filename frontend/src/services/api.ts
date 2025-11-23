@@ -74,6 +74,25 @@ class ApiService {
     return response.data;
   }
 
+  async requestPasswordReset(email: string) {
+    const response = await this.client.post('/auth/password-reset/request', { email });
+    return response.data;
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const response = await this.client.post('/auth/password-reset/reset', {
+      token,
+      new_password: newPassword,
+    });
+    return response.data;
+  }
+
+  async getDashboardStats(organizationId?: string) {
+    const params = organizationId ? { organization_id: organizationId } : undefined;
+    const response = await this.client.get('/dashboard/stats', { params });
+    return response.data;
+  }
+
   // Organizations
   async getOrganizations(params?: { page?: number; page_size?: number }) {
     const response = await this.client.get('/organizations', { params });

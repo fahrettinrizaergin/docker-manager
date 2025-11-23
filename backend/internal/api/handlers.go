@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -151,6 +152,103 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"token": token,
 	})
+}
+
+func (h *AuthHandler) RequestPasswordReset(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	// Get user by email
+	user, err := h.userService.GetByEmail(req.Email)
+	if err != nil {
+		// Don't reveal whether user exists or not for security
+		c.JSON(http.StatusOK, gin.H{"message": "If the email exists, a password reset link will be sent"})
+		return
+	}
+
+	// Generate reset token
+	resetToken := uuid.New().String()
+	expiresAt := time.Now().Add(24 * time.Hour) // Token valid for 24 hours
+
+	// Create password reset record
+	passwordReset := &models.PasswordReset{
+		UserID:    user.ID,
+		Token:     resetToken,
+		ExpiresAt: expiresAt,
+		CreatedAt: time.Now(),
+	}
+
+	if err := h.userService.CreatePasswordReset(passwordReset); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create password reset"})
+		return
+	}
+
+	// TODO: Send email with reset link
+	// For now, return the token (in production, this should be sent via email)
+	log.Printf("Password reset token for %s: %s", user.Email, resetToken)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "If the email exists, a password reset link will be sent",
+		// Remove this in production:
+		"token": resetToken,
+	})
+}
+
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req struct {
+		Token       string `json:"token" binding:"required"`
+		NewPassword string `json:"new_password" binding:"required,min=8"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	// Verify token
+	passwordReset, err := h.userService.GetPasswordResetByToken(req.Token)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired reset token"})
+		return
+	}
+
+	if passwordReset.IsExpired() {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Reset token has expired"})
+		return
+	}
+
+	if passwordReset.IsUsed() {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Reset token has already been used"})
+		return
+	}
+
+	// Hash new password
+	hashedPassword, err := auth.HashPassword(req.NewPassword)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
+
+	// Update password
+	if err := h.userService.UpdatePassword(passwordReset.UserID, hashedPassword); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
+		return
+	}
+
+	// Mark token as used
+	now := time.Now()
+	passwordReset.UsedAt = &now
+	if err := h.userService.UpdatePasswordReset(passwordReset); err != nil {
+		log.Printf("Failed to mark password reset token as used: %v", err)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully"})
 }
 
 func (h *AuthHandler) GitLabCallback(c *gin.Context) {
@@ -1342,6 +1440,115 @@ func NewActivityHandler(cfg *config.Config) *ActivityHandler {
 
 func (h *ActivityHandler) ListActivities(c *gin.Context) {
 	c.JSON(501, gin.H{"message": "ListActivities endpoint - not implemented"})
+}
+
+// DashboardHandler handles dashboard operations
+type DashboardHandler struct {
+	cfg               *config.Config
+	userService       *service.UserService
+	orgService        *service.OrganizationService
+	projectService    *service.ProjectService
+	appService        *service.ApplicationService
+	containerService  *service.ContainerService
+}
+
+func NewDashboardHandler(
+	cfg *config.Config,
+	userService *service.UserService,
+	orgService *service.OrganizationService,
+	projectService *service.ProjectService,
+	appService *service.ApplicationService,
+	containerService *service.ContainerService,
+) *DashboardHandler {
+	return &DashboardHandler{
+		cfg:              cfg,
+		userService:      userService,
+		orgService:       orgService,
+		projectService:   projectService,
+		appService:       appService,
+		containerService: containerService,
+	}
+}
+
+func (h *DashboardHandler) GetStats(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	userRole, _ := c.Get("user_role")
+	orgIDStr := c.Query("organization_id")
+
+	var stats map[string]interface{}
+
+	// If user is admin, get global stats
+	if userRole.(string) == "admin" {
+		// Get total counts
+		_, totalUsers, _ := h.userService.List(1, 1)
+		_, totalOrgs, _ := h.orgService.List(1, 1)
+		_, totalProjects, _ := h.projectService.List(1, 1)
+		_, totalApps, _ := h.appService.List(1, 1)
+		_, totalContainers, _ := h.containerService.List(1, 1)
+
+		// Count active containers
+		activeContainers := int64(0)
+		containers, _, err := h.containerService.List(1, 10000) // Get all containers
+		if err == nil {
+			for _, container := range containers {
+				if container.Status == "running" {
+					activeContainers++
+				}
+			}
+		}
+
+		stats = map[string]interface{}{
+			"users":             totalUsers,
+			"organizations":     totalOrgs,
+			"projects":          totalProjects,
+			"applications":      totalApps,
+			"containers":        totalContainers,
+			"active_containers": activeContainers,
+		}
+	} else {
+		// Get user-specific stats
+		orgs, _ := h.userService.GetOrganizations(userID.(uuid.UUID))
+		
+		var totalProjects int64 = 0
+		var totalApps int64 = 0
+		var totalContainers int64 = 0
+		var activeContainers int64 = 0
+
+		// If specific organization is requested
+		if orgIDStr != "" {
+			orgID, err := uuid.Parse(orgIDStr)
+			if err == nil {
+				_, totalProjects, _ = h.projectService.ListByOrganizationID(orgID, 1, 1)
+				projects, _, _ := h.projectService.ListByOrganizationID(orgID, 1, 10000)
+				
+				for _, project := range projects {
+					_, projectApps, _ := h.appService.ListByProjectID(project.ID, 1, 10000)
+					totalApps += projectApps
+				}
+			}
+		} else {
+			// Aggregate stats across all organizations
+			for _, org := range orgs {
+				_, orgProjects, _ := h.projectService.ListByOrganizationID(org.ID, 1, 1)
+				totalProjects += orgProjects
+			}
+		}
+
+		stats = map[string]interface{}{
+			"organizations":     len(orgs),
+			"projects":          totalProjects,
+			"applications":      totalApps,
+			"containers":        totalContainers,
+			"active_containers": activeContainers,
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": stats})
 }
 
 // ContainerHandler handles container operations
