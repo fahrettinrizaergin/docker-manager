@@ -73,7 +73,7 @@ const ContainerConfiguration: React.FC = () => {
   const [autoDeploy, setAutoDeploy] = useState(false);
   const [cleanCache, setCleanCache] = useState(false);
   const [provider, setProvider] = useState('github');
-  const [deploySettings] = useState({
+  const [deploySettings, setDeploySettings] = useState({
     account: '',
     repo: '',
     branch: '',
@@ -255,13 +255,37 @@ const ContainerConfiguration: React.FC = () => {
 
                 {(provider === 'github' || provider === 'gitea') && (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <TextField label="Account" fullWidth value={deploySettings.account} />
-                    <TextField label="Repository" fullWidth value={deploySettings.repo} />
-                    <TextField label="Branch" fullWidth value={deploySettings.branch} />
-                    <TextField label="Build Path" fullWidth value={deploySettings.buildPath} />
+                    <TextField 
+                      label="Account" 
+                      fullWidth 
+                      value={deploySettings.account}
+                      onChange={(e) => setDeploySettings({...deploySettings, account: e.target.value})}
+                    />
+                    <TextField 
+                      label="Repository" 
+                      fullWidth 
+                      value={deploySettings.repo}
+                      onChange={(e) => setDeploySettings({...deploySettings, repo: e.target.value})}
+                    />
+                    <TextField 
+                      label="Branch" 
+                      fullWidth 
+                      value={deploySettings.branch}
+                      onChange={(e) => setDeploySettings({...deploySettings, branch: e.target.value})}
+                    />
+                    <TextField 
+                      label="Build Path" 
+                      fullWidth 
+                      value={deploySettings.buildPath}
+                      onChange={(e) => setDeploySettings({...deploySettings, buildPath: e.target.value})}
+                    />
                     <FormControl fullWidth>
                       <InputLabel>Trigger Type</InputLabel>
-                      <Select value={deploySettings.triggerType} label="Trigger Type">
+                      <Select 
+                        value={deploySettings.triggerType} 
+                        label="Trigger Type"
+                        onChange={(e) => setDeploySettings({...deploySettings, triggerType: e.target.value})}
+                      >
                         <MenuItem value="push">Push</MenuItem>
                         <MenuItem value="tag">Tag</MenuItem>
                       </Select>
@@ -271,10 +295,31 @@ const ContainerConfiguration: React.FC = () => {
 
                 {provider === 'docker' && (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <TextField label="Image" fullWidth value={deploySettings.image} />
-                    <TextField label="Registry URL" fullWidth value={deploySettings.registryUrl} />
-                    <TextField label="Username" fullWidth value={deploySettings.username} />
-                    <TextField label="Password" type="password" fullWidth value={deploySettings.password} />
+                    <TextField 
+                      label="Image" 
+                      fullWidth 
+                      value={deploySettings.image}
+                      onChange={(e) => setDeploySettings({...deploySettings, image: e.target.value})}
+                    />
+                    <TextField 
+                      label="Registry URL" 
+                      fullWidth 
+                      value={deploySettings.registryUrl}
+                      onChange={(e) => setDeploySettings({...deploySettings, registryUrl: e.target.value})}
+                    />
+                    <TextField 
+                      label="Username" 
+                      fullWidth 
+                      value={deploySettings.username}
+                      onChange={(e) => setDeploySettings({...deploySettings, username: e.target.value})}
+                    />
+                    <TextField 
+                      label="Password" 
+                      type="password" 
+                      fullWidth 
+                      value={deploySettings.password}
+                      onChange={(e) => setDeploySettings({...deploySettings, password: e.target.value})}
+                    />
                   </Box>
                 )}
 

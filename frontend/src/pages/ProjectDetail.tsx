@@ -33,6 +33,7 @@ import {
   Folder as FolderIcon,
   Refresh as RefreshIcon,
   Delete as DeleteIcon,
+  Add as AddIcon,
   MoreVert as MoreVertIcon,
   PlayArrow as PlayIcon,
   Stop as StopIcon,
@@ -388,9 +389,16 @@ const ProjectDetailEnhanced: React.FC = () => {
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleOpenCreateDialog}
+            >
+              Create New
+            </Button>
+            <Button
               variant="outlined"
               startIcon={<RefreshIcon />}
-              onClick={handleOpenCreateDialog}
+              onClick={loadProjectDetails}
             >
               Refresh
             </Button>

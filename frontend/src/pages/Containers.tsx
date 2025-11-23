@@ -42,8 +42,6 @@ const Containers: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     image: '',
-    application_id: '',
-    node_id: '',
   });
 
   useEffect(() => {
@@ -69,16 +67,12 @@ const Containers: React.FC = () => {
       setFormData({
         name: container.name,
         image: container.image || '',
-        application_id: container.application_id,
-        node_id: container.node_id,
       });
     } else {
       setEditingContainer(null);
       setFormData({
         name: '',
         image: '',
-        application_id: '',
-        node_id: '',
       });
     }
     setOpenDialog(true);
