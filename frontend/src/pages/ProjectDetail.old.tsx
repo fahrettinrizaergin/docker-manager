@@ -29,14 +29,13 @@ import { useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
 import api from '../services/api';
-import { Project, Container, Application } from '../types';
+import { Project, Container } from '../types';
 import { useAppStore } from '../store/useAppStore';
 
 const ProjectDetail: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const { selectedProject, setSelectedProject } = useAppStore();
   const [project, setProject] = useState<Project | null>(selectedProject);
-  const [applications, setApplications] = useState<Application[]>([]);
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,18 +57,18 @@ const ProjectDetail: React.FC = () => {
         setSelectedProject(projectResponse.data);
       }
       
-      // Load applications for the project
-      const appsResponse = await api.getApplications({ project_id: projectId });
+      // Load containers for the project
+      const appsResponse = await api.getContainers({ project_id: projectId });
       const apps = appsResponse.data || [];
-      setApplications(apps);
+      setContainers(apps);
       
-      // Load containers for all applications in the project
-      const containerPromises = apps.map((app: Application) => 
-        api.getContainers({ application_id: app.id })
-      );
-      const containerResponses = await Promise.all(containerPromises);
-      const allContainers = containerResponses.flatMap((res) => res.data || []);
-      setContainers(allContainers);
+      // TODO: Load container instances when the API endpoint is available
+      // const containerPromises = apps.map((app: Container) => 
+      //   api.getContainerInstances({ container_id: app.id })
+      // );
+      // const containerResponses = await Promise.all(containerPromises);
+      // const allContainers = containerResponses.flatMap((res) => res.data || []);
+      // setContainerInstances(allContainers);
     } catch (error: any) {
       console.error('Failed to load project details:', error);
       toast.error('Failed to load project details');
@@ -80,15 +79,17 @@ const ProjectDetail: React.FC = () => {
 
   const refreshContainers = async () => {
     try {
-      const appsResponse = await api.getApplications({ project_id: projectId });
+      const appsResponse = await api.getContainers({ project_id: projectId });
       const apps = appsResponse.data || [];
+      setContainers(apps);
       
-      const containerPromises = apps.map((app: Application) => 
-        api.getContainers({ application_id: app.id })
-      );
-      const containerResponses = await Promise.all(containerPromises);
-      const allContainers = containerResponses.flatMap((res) => res.data || []);
-      setContainers(allContainers);
+      // TODO: Load container instances when API is available
+      // const containerPromises = apps.map((app: Container) => 
+      //   api.getContainerInstances({ container_id: app.id })
+      // );
+      // const containerResponses = await Promise.all(containerPromises);
+      // const allContainers = containerResponses.flatMap((res) => res.data || []);
+      // setContainerInstances(allContainers);
     } catch (error: any) {
       console.error('Failed to refresh containers:', error);
     }
@@ -197,10 +198,10 @@ const ProjectDetail: React.FC = () => {
           <Grid item xs={12} md={4}>
             <Card>
               <CardContent>
-                <Typography variant="h6" color="primary">Applications</Typography>
-                <Typography variant="h3">{applications.length}</Typography>
+                <Typography variant="h6" color="primary">Containers</Typography>
+                <Typography variant="h3">{containers.length}</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Total applications
+                  Total containers
                 </Typography>
               </CardContent>
             </Card>
@@ -248,10 +249,9 @@ const ProjectDetail: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>
-                    <TableCell>Application</TableCell>
                     <TableCell>Image</TableCell>
                     <TableCell>Status</TableCell>
-                    <TableCell>IP Address</TableCell>
+                    
                     <TableCell align="right">Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -259,8 +259,7 @@ const ProjectDetail: React.FC = () => {
                   {containers.map((container) => (
                     <TableRow key={container.id}>
                       <TableCell>{container.name}</TableCell>
-                      <TableCell>{container.application?.name || '-'}</TableCell>
-                      <TableCell>{container.image}</TableCell>
+                      <TableCell>{container.image || '-'}</TableCell>
                       <TableCell>
                         <Chip
                           label={container.status}
@@ -268,7 +267,6 @@ const ProjectDetail: React.FC = () => {
                           size="small"
                         />
                       </TableCell>
-                      <TableCell>{container.ip_address || '-'}</TableCell>
                       <TableCell align="right">
                         <IconButton
                           size="small"
@@ -305,15 +303,15 @@ const ProjectDetail: React.FC = () => {
           )}
         </Paper>
 
-        {/* Applications Table */}
+        {/* Containers Table */}
         <Paper>
           <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-            <Typography variant="h6">Applications</Typography>
+            <Typography variant="h6">Containers</Typography>
           </Box>
-          {applications.length === 0 ? (
+          {containers.length === 0 ? (
             <Box sx={{ p: 4, textAlign: 'center' }}>
               <Typography variant="body1" color="text.secondary">
-                No applications found in this project
+                No containers found in this project
               </Typography>
             </Box>
           ) : (
@@ -328,7 +326,7 @@ const ProjectDetail: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {applications.map((app) => (
+                  {containers.map((app) => (
                     <TableRow key={app.id}>
                       <TableCell>{app.name}</TableCell>
                       <TableCell>{app.type}</TableCell>

@@ -45,7 +45,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
 import api from '../services/api';
-import { Project, Container, Application } from '../types';
+import { Project, Container } from '../types';
 import { useAppStore } from '../store/useAppStore';
 
 interface TabPanelProps {
@@ -74,7 +74,6 @@ const ProjectDetailEnhanced: React.FC = () => {
   const navigate = useNavigate();
   const { selectedProject, setSelectedProject } = useAppStore();
   const [project, setProject] = useState<Project | null>(selectedProject);
-  const [applications, setApplications] = useState<Application[]>([]);
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -82,7 +81,7 @@ const ProjectDetailEnhanced: React.FC = () => {
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
   const [createTabValue, setCreateTabValue] = useState(0);
   const [createFormData, setCreateFormData] = useState<any>({
-    // Application
+    // Container
     name: '',
     app_name: '',
     // Database
@@ -128,16 +127,17 @@ const ProjectDetailEnhanced: React.FC = () => {
         setSelectedProject(projectResponse.data);
       }
       
-      const appsResponse = await api.getApplications({ project_id: projectId });
+      const appsResponse = await api.getContainers({ project_id: projectId });
       const apps = appsResponse.data || [];
-      setApplications(apps);
+      setContainers(apps);
       
-      const containerPromises = apps.map((app: Application) => 
-        api.getContainers({ application_id: app.id })
-      );
-      const containerResponses = await Promise.all(containerPromises);
-      const allContainers = containerResponses.flatMap((res) => res.data || []);
-      setContainers(allContainers);
+      // TODO: Load container instances when API is available
+      // const containerPromises = apps.map((app: Container) => 
+      //   api.getContainerInstances({ container_id: app.id })
+      // );
+      // const containerResponses = await Promise.all(containerPromises);
+      // const allContainers = containerResponses.flatMap((res) => res.data || []);
+      // setContainerInstances(allContainers);
     } catch (error: any) {
       console.error('Failed to load project details:', error);
       toast.error('Failed to load project details');
@@ -148,15 +148,17 @@ const ProjectDetailEnhanced: React.FC = () => {
 
   const refreshContainers = async () => {
     try {
-      const appsResponse = await api.getApplications({ project_id: projectId });
+      const appsResponse = await api.getContainers({ project_id: projectId });
       const apps = appsResponse.data || [];
+      setContainers(apps);
       
-      const containerPromises = apps.map((app: Application) => 
-        api.getContainers({ application_id: app.id })
-      );
-      const containerResponses = await Promise.all(containerPromises);
-      const allContainers = containerResponses.flatMap((res) => res.data || []);
-      setContainers(allContainers);
+      // TODO: Load container instances when API is available
+      // const containerPromises = apps.map((app: Container) => 
+      //   api.getContainerInstances({ container_id: app.id })
+      // );
+      // const containerResponses = await Promise.all(containerPromises);
+      // const allContainers = containerResponses.flatMap((res) => res.data || []);
+      // setContainerInstances(allContainers);
     } catch (error: any) {
       console.error('Failed to refresh containers:', error);
     }
@@ -188,18 +190,18 @@ const ProjectDetailEnhanced: React.FC = () => {
     try {
       // Based on the tab, create different types of containers
       switch (createTabValue) {
-        case 0: // Application
-          await api.createApplication({
+        case 0: // Container
+          await api.createContainer({
             project_id: projectId,
             name: createFormData.name,
             slug: createFormData.app_name || createFormData.name.toLowerCase().replace(/\s+/g, '-'),
             type: 'container',
           });
-          toast.success('Application created successfully');
+          toast.success('Container created successfully');
           break;
         case 1: // Database
           // Create database container based on type
-          await api.createApplication({
+          await api.createContainer({
             project_id: projectId,
             name: createFormData.name,
             slug: createFormData.name.toLowerCase().replace(/\s+/g, '-'),
@@ -210,7 +212,7 @@ const ProjectDetailEnhanced: React.FC = () => {
           toast.success('Database container created successfully');
           break;
         case 2: // Compose
-          await api.createApplication({
+          await api.createContainer({
             project_id: projectId,
             name: createFormData.name,
             slug: createFormData.app_name || createFormData.name.toLowerCase().replace(/\s+/g, '-'),
@@ -418,10 +420,10 @@ const ProjectDetailEnhanced: React.FC = () => {
           <Grid item xs={12} md={4}>
             <Card>
               <CardContent>
-                <Typography variant="h6" color="primary">Applications</Typography>
-                <Typography variant="h3">{applications.length}</Typography>
+                <Typography variant="h6" color="primary">Containers</Typography>
+                <Typography variant="h3">{containers.length}</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Total applications
+                  Total containers
                 </Typography>
               </CardContent>
             </Card>
@@ -469,10 +471,9 @@ const ProjectDetailEnhanced: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>
-                    <TableCell>Application</TableCell>
+                    <TableCell>Type</TableCell>
                     <TableCell>Image</TableCell>
                     <TableCell>Status</TableCell>
-                    <TableCell>IP Address</TableCell>
                     <TableCell align="right">Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -480,8 +481,8 @@ const ProjectDetailEnhanced: React.FC = () => {
                   {containers.map((container) => (
                     <TableRow key={container.id}>
                       <TableCell>{container.name}</TableCell>
-                      <TableCell>{container.application?.name || '-'}</TableCell>
-                      <TableCell>{container.image}</TableCell>
+                      <TableCell>{container.type || '-'}</TableCell>
+                      <TableCell>{container.image || '-'}</TableCell>
                       <TableCell>
                         <Chip
                           label={container.status}
@@ -489,7 +490,6 @@ const ProjectDetailEnhanced: React.FC = () => {
                           size="small"
                         />
                       </TableCell>
-                      <TableCell>{container.ip_address || '-'}</TableCell>
                       <TableCell align="right">
                         <IconButton
                           size="small"
@@ -537,7 +537,7 @@ const ProjectDetailEnhanced: React.FC = () => {
           <DialogTitle>Create New Container</DialogTitle>
           <DialogContent>
             <Tabs value={createTabValue} onChange={(e, v) => setCreateTabValue(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Tab label="Application" />
+              <Tab label="Container" />
               <Tab label="Database" />
               <Tab label="Compose" />
               <Tab label="Template" />
@@ -671,7 +671,7 @@ const ProjectDetailEnhanced: React.FC = () => {
             <TabPanel value={createTabValue} index={3}>
               <Box sx={{ p: 2, textAlign: 'center' }}>
                 <Typography variant="body1" color="text.secondary">
-                  Template deployment will show a list of predefined applications with a "Create" button for each.
+                  Template deployment will show a list of predefined containers with a "Create" button for each.
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
                   This feature requires backend implementation.

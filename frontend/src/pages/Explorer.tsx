@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
+  Container as MuiContainer,
   Typography,
   Paper,
   Box,
@@ -33,12 +33,12 @@ import {
 import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
 import api from '../services/api';
-import { Organization, Project, Application } from '../types';
+import { Organization, Project, Container } from '../types';
 
 const Explorer: React.FC = () => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [applications, setApplications] = useState<Application[]>([]);
+  const [containers, setContainers] = useState<Container[]>([]);
   
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -77,13 +77,13 @@ const Explorer: React.FC = () => {
     }
   };
 
-  const loadApplications = async (projectId: string) => {
+  const loadContainers = async (projectId: string) => {
     try {
       setLoadingApps(true);
-      const response = await api.getApplications({ project_id: projectId });
-      setApplications(response.data || []);
+      const response = await api.getContainers({ project_id: projectId });
+      setContainers(response.data || []);
     } catch (error: any) {
-      toast.error('Failed to load applications');
+      toast.error('Failed to load containers');
       console.error(error);
     } finally {
       setLoadingApps(false);
@@ -94,34 +94,34 @@ const Explorer: React.FC = () => {
     setSelectedOrg(org);
     setSelectedProject(null);
     setProjects([]);
-    setApplications([]);
+    setContainers([]);
     loadProjects(org.id);
   };
 
   const handleSelectProject = (project: Project) => {
     setSelectedProject(project);
-    setApplications([]);
-    loadApplications(project.id);
+    setContainers([]);
+    loadContainers(project.id);
   };
 
   const handleBackToOrgs = () => {
     setSelectedOrg(null);
     setSelectedProject(null);
     setProjects([]);
-    setApplications([]);
+    setContainers([]);
   };
 
   const handleBackToProjects = () => {
     setSelectedProject(null);
-    setApplications([]);
+    setContainers([]);
   };
 
   const handleStartApp = async (id: string) => {
     try {
-      await api.startApplication(id);
-      toast.success('Application started successfully');
+      await api.startContainer(id);
+      toast.success('Container started successfully');
       if (selectedProject) {
-        loadApplications(selectedProject.id);
+        loadContainers(selectedProject.id);
       }
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to start application');
@@ -130,10 +130,10 @@ const Explorer: React.FC = () => {
 
   const handleStopApp = async (id: string) => {
     try {
-      await api.stopApplication(id);
-      toast.success('Application stopped successfully');
+      await api.stopContainer(id);
+      toast.success('Container stopped successfully');
       if (selectedProject) {
-        loadApplications(selectedProject.id);
+        loadContainers(selectedProject.id);
       }
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to stop application');
@@ -142,10 +142,10 @@ const Explorer: React.FC = () => {
 
   const handleRestartApp = async (id: string) => {
     try {
-      await api.restartApplication(id);
-      toast.success('Application restarted successfully');
+      await api.restartContainer(id);
+      toast.success('Container restarted successfully');
       if (selectedProject) {
-        loadApplications(selectedProject.id);
+        loadContainers(selectedProject.id);
       }
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to restart application');
@@ -171,7 +171,7 @@ const Explorer: React.FC = () => {
 
   return (
     <Layout>
-      <Container maxWidth="xl">
+      <MuiContainer maxWidth="xl">
         <Box sx={{ mb: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom>
             Resource Explorer
@@ -300,14 +300,14 @@ const Explorer: React.FC = () => {
             </Paper>
           </Grid>
 
-          {/* Right Panel - Applications/Containers */}
+          {/* Right Panel - Containers/Containers */}
           <Grid item xs={12} md={8}>
             <Paper sx={{ p: 2, height: '600px', overflow: 'auto' }}>
               {selectedProject ? (
                 <>
                   <Typography variant="h6" gutterBottom>
                     <AppsIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                    Applications & Containers
+                    Containers & Containers
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
 
@@ -315,16 +315,16 @@ const Explorer: React.FC = () => {
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                       <CircularProgress />
                     </Box>
-                  ) : applications.length === 0 ? (
+                  ) : containers.length === 0 ? (
                     <Box sx={{ textAlign: 'center', py: 8 }}>
                       <AppsIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                       <Typography color="text.secondary">
-                        No applications found in this project
+                        No containers found in this project
                       </Typography>
                     </Box>
                   ) : (
                     <Grid container spacing={2}>
-                      {applications.map((app) => (
+                      {containers.map((app) => (
                         <Grid item xs={12} key={app.id}>
                           <Card variant="outlined">
                             <CardContent>
@@ -396,15 +396,15 @@ const Explorer: React.FC = () => {
                   </Typography>
                   <Typography color="text.secondary">
                     {selectedOrg
-                      ? 'Choose a project from the left panel to view its applications'
-                      : 'First select an organization, then select a project to view applications'}
+                      ? 'Choose a project from the left panel to view its containers'
+                      : 'First select an organization, then select a project to view containers'}
                   </Typography>
                 </Box>
               )}
             </Paper>
           </Grid>
         </Grid>
-      </Container>
+      </MuiContainer>
     </Layout>
   );
 };

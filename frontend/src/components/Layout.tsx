@@ -24,7 +24,6 @@ import {
   Dashboard as DashboardIcon,
   Folder as FolderIcon,
   Storage as StorageIcon,
-  CloudQueue as CloudQueueIcon,
   ViewModule as ViewModuleIcon,
   Settings as SettingsIcon,
   Notifications as NotificationsIcon,
@@ -138,7 +137,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Nodes', icon: <StorageIcon />, path: '/nodes' },
-    { text: 'Deployments', icon: <CloudQueueIcon />, path: '/deployments' },
     { text: 'Templates', icon: <ViewModuleIcon />, path: '/templates' },
   ];
 

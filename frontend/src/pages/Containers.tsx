@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
+  Container as MuiContainer,
   Typography,
   Paper,
   Box,
@@ -19,9 +19,10 @@ import {
   TextField,
   CircularProgress,
   Chip,
+  MenuItem,
 } from '@mui/material';
 import {
-  Storage as ContainerIcon,
+  Apps as AppsIcon,
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
@@ -32,16 +33,23 @@ import {
 import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
 import api from '../services/api';
-import { Container as ContainerType } from '../types';
+import { Container } from '../types';
 
 const Containers: React.FC = () => {
-  const [containers, setContainers] = useState<ContainerType[]>([]);
+  const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
-  const [editingContainer, setEditingContainer] = useState<ContainerType | null>(null);
+  const [editingApp, setEditingApp] = useState<Container | null>(null);
   const [formData, setFormData] = useState({
     name: '',
+    slug: '',
+    description: '',
+    project_id: '',
+    type: 'container' as 'docker-compose' | 'container' | 'template',
     image: '',
+    tag: 'latest',
+    port: 80,
+    internal_port: 80,
   });
 
   useEffect(() => {
@@ -61,18 +69,32 @@ const Containers: React.FC = () => {
     }
   };
 
-  const handleOpenDialog = (container?: ContainerType) => {
-    if (container) {
-      setEditingContainer(container);
+  const handleOpenDialog = (app?: Container) => {
+    if (app) {
+      setEditingApp(app);
       setFormData({
-        name: container.name,
-        image: container.image || '',
+        name: app.name,
+        slug: app.slug,
+        description: app.description || '',
+        project_id: app.project_id,
+        type: app.type,
+        image: app.image || '',
+        tag: app.tag,
+        port: app.port || 80,
+        internal_port: app.internal_port || 80,
       });
     } else {
-      setEditingContainer(null);
+      setEditingApp(null);
       setFormData({
         name: '',
+        slug: '',
+        description: '',
+        project_id: '',
+        type: 'container',
         image: '',
+        tag: 'latest',
+        port: 80,
+        internal_port: 80,
       });
     }
     setOpenDialog(true);
@@ -80,13 +102,13 @@ const Containers: React.FC = () => {
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
-    setEditingContainer(null);
+    setEditingApp(null);
   };
 
   const handleSubmit = async () => {
     try {
-      if (editingContainer) {
-        await api.updateContainer(editingContainer.id, formData);
+      if (editingApp) {
+        await api.updateContainer(editingApp.id, formData);
         toast.success('Container updated successfully');
       } else {
         await api.createContainer(formData);
@@ -144,17 +166,14 @@ const Containers: React.FC = () => {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
+    switch (status) {
       case 'running':
         return 'success';
       case 'stopped':
-      case 'exited':
         return 'default';
-      case 'starting':
-      case 'created':
+      case 'deploying':
         return 'info';
       case 'error':
-      case 'dead':
         return 'error';
       case 'paused':
         return 'warning';
@@ -165,10 +184,10 @@ const Containers: React.FC = () => {
 
   return (
     <Layout>
-      <Container maxWidth="xl">
+      <MuiContainer maxWidth="xl">
         <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h4" component="h1">
-            <ContainerIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+            <AppsIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
             Containers
           </Typography>
           <Button
@@ -190,9 +209,9 @@ const Containers: React.FC = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>Name</TableCell>
+                  <TableCell>Type</TableCell>
                   <TableCell>Image</TableCell>
                   <TableCell>Status</TableCell>
-                  <TableCell>IP Address</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -204,53 +223,53 @@ const Containers: React.FC = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  containers.map((container) => (
-                    <TableRow key={container.id}>
-                      <TableCell>{container.name}</TableCell>
-                      <TableCell>{container.image}</TableCell>
+                  containers.map((app) => (
+                    <TableRow key={app.id}>
+                      <TableCell>{app.name}</TableCell>
+                      <TableCell>{app.type}</TableCell>
+                      <TableCell>{app.image ? `${app.image}:${app.tag}` : '-'}</TableCell>
                       <TableCell>
                         <Chip
-                          label={container.status}
-                          color={getStatusColor(container.status) as any}
+                          label={app.status}
+                          color={getStatusColor(app.status) as any}
                           size="small"
                         />
                       </TableCell>
-                      <TableCell>{container.ip_address || '-'}</TableCell>
                       <TableCell align="right">
                         <IconButton
                           size="small"
                           color="success"
-                          onClick={() => handleStart(container.id)}
-                          disabled={container.status?.toLowerCase() === 'running'}
+                          onClick={() => handleStart(app.id)}
+                          disabled={app.status === 'running'}
                         >
                           <PlayIcon />
                         </IconButton>
                         <IconButton
                           size="small"
                           color="error"
-                          onClick={() => handleStop(container.id)}
-                          disabled={container.status?.toLowerCase() !== 'running'}
+                          onClick={() => handleStop(app.id)}
+                          disabled={app.status === 'stopped'}
                         >
                           <StopIcon />
                         </IconButton>
                         <IconButton
                           size="small"
                           color="info"
-                          onClick={() => handleRestart(container.id)}
+                          onClick={() => handleRestart(app.id)}
                         >
                           <RefreshIcon />
                         </IconButton>
                         <IconButton
                           size="small"
                           color="primary"
-                          onClick={() => handleOpenDialog(container)}
+                          onClick={() => handleOpenDialog(app)}
                         >
                           <EditIcon />
                         </IconButton>
                         <IconButton
                           size="small"
                           color="error"
-                          onClick={() => handleDelete(container.id)}
+                          onClick={() => handleDelete(app.id)}
                         >
                           <DeleteIcon />
                         </IconButton>
@@ -265,7 +284,7 @@ const Containers: React.FC = () => {
 
         <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
           <DialogTitle>
-            {editingContainer ? 'Edit Container' : 'Create Container'}
+            {editingApp ? 'Edit Container' : 'Create Container'}
           </DialogTitle>
           <DialogContent>
             <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -277,23 +296,71 @@ const Containers: React.FC = () => {
                 required
               />
               <TextField
+                label="Slug"
+                fullWidth
+                value={formData.slug}
+                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                required
+                helperText="URL-friendly identifier"
+              />
+              <TextField
+                label="Type"
+                fullWidth
+                select
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+              >
+                <MenuItem value="container">Container</MenuItem>
+                <MenuItem value="docker-compose">Docker Compose</MenuItem>
+                <MenuItem value="template">Template</MenuItem>
+              </TextField>
+              <TextField
                 label="Image"
                 fullWidth
                 value={formData.image}
                 onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                helperText="Docker image name (e.g., nginx:latest, mysql:8.0)"
-                required
+                helperText="Docker image name (e.g., nginx, mysql)"
+              />
+              <TextField
+                label="Tag"
+                fullWidth
+                value={formData.tag}
+                onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
+              />
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="Port"
+                  type="number"
+                  fullWidth
+                  value={formData.port}
+                  onChange={(e) => setFormData({ ...formData, port: parseInt(e.target.value) })}
+                />
+                <TextField
+                  label="Internal Port"
+                  type="number"
+                  fullWidth
+                  value={formData.internal_port}
+                  onChange={(e) => setFormData({ ...formData, internal_port: parseInt(e.target.value) })}
+                />
+              </Box>
+              <TextField
+                label="Description"
+                fullWidth
+                multiline
+                rows={3}
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </Box>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseDialog}>Cancel</Button>
             <Button onClick={handleSubmit} variant="contained">
-              {editingContainer ? 'Update' : 'Create'}
+              {editingApp ? 'Update' : 'Create'}
             </Button>
           </DialogActions>
         </Dialog>
-      </Container>
+      </MuiContainer>
     </Layout>
   );
 };
