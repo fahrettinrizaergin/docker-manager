@@ -49,7 +49,6 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 		auth := v1.Group("/auth")
 		{
 			authHandler := NewAuthHandler(cfg, userService)
-			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
 			auth.POST("/password-reset/request", authHandler.RequestPasswordReset)
 			auth.POST("/password-reset/reset", authHandler.ResetPassword)

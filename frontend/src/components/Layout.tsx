@@ -28,8 +28,6 @@ import {
   ViewModule as ViewModuleIcon,
   Settings as SettingsIcon,
   Notifications as NotificationsIcon,
-  AccountCircle as AccountCircleIcon,
-  ExploreOutlined as ExploreIcon,
   Logout as LogoutIcon,
   Person as PersonIcon,
 } from '@mui/icons-material';
@@ -139,7 +137,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-    { text: 'Explorer', icon: <ExploreIcon />, path: '/explorer' },
     { text: 'Nodes', icon: <StorageIcon />, path: '/nodes' },
     { text: 'Deployments', icon: <CloudQueueIcon />, path: '/deployments' },
     { text: 'Templates', icon: <ViewModuleIcon />, path: '/templates' },
