@@ -1,0 +1,21 @@
+# Traefik Static Configuration
+api:
+  insecure: true
+
+providers:
+  docker:
+    exposedByDefault: false
+  file:
+    filename: /etc/traefik/dynamic.yml
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+experimental:
+  plugins:
+    traefik-plugin-AdminAPI_WebUI:
+      moduleName: github.com/Miromani4/traefik-plugin-AdminAPI_WebUI
+      version: v1.3.1
