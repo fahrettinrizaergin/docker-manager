@@ -63,6 +63,8 @@ func (f *Folder) BeforeCreate(tx *gorm.DB) error {
 }
 
 // Application represents a Docker application (can be single container or compose)
+// Note: JSONB fields (Domains, HealthCheck, Labels, Capabilities) use *string to allow NULL in database.
+// This prevents PostgreSQL errors when fields are not provided, as empty string "" is invalid JSON.
 type Application struct {
 	ID          uuid.UUID  `gorm:"type:uuid;primary_key" json:"id"`
 	ProjectID   uuid.UUID  `gorm:"type:uuid;not null;index" json:"project_id"`
