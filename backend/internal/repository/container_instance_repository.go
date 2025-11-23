@@ -70,13 +70,13 @@ func (r *ContainerInstanceRepository) List(limit, offset int) ([]models.Containe
 	return containers, total, nil
 }
 
-// ListByApplicationID retrieves containers for a specific application
-func (r *ContainerInstanceRepository) ListByApplicationID(appID uuid.UUID) ([]models.ContainerInstance, error) {
+// ListByContainerID retrieves container instances for a specific container
+func (r *ContainerInstanceRepository) ListByContainerID(containerID uuid.UUID) ([]models.ContainerInstance, error) {
 	var containers []models.ContainerInstance
 	err := r.db.
 		Preload("Container").
 		Preload("Node").
-		Where("application_id = ?", appID).
+		Where("container_id = ?", containerID).
 		Find(&containers).Error
 	if err != nil {
 		return nil, err

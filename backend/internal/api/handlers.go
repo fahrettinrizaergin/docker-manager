@@ -999,14 +999,14 @@ func (h *ContainerHandler) ListContainers(c *gin.Context) {
 func (h *ContainerHandler) GetContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
 		return
 	}
 
 	app, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "Container not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch container"})
@@ -1019,7 +1019,7 @@ func (h *ContainerHandler) GetContainer(c *gin.Context) {
 func (h *ContainerHandler) UpdateContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
 		return
 	}
 
@@ -1032,7 +1032,7 @@ func (h *ContainerHandler) UpdateContainer(c *gin.Context) {
 	app, err := h.service.Update(id, updates)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "Container not found"})
 			return
 		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -1045,26 +1045,26 @@ func (h *ContainerHandler) UpdateContainer(c *gin.Context) {
 func (h *ContainerHandler) DeleteContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
 		return
 	}
 
 	if err := h.service.Delete(id); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "Container not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete container"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Application deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Container deleted successfully"})
 }
 
 func (h *ContainerHandler) StartContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
 		return
 	}
 
@@ -1073,13 +1073,13 @@ func (h *ContainerHandler) StartContainer(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Application started successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Container started successfully"})
 }
 
 func (h *ContainerHandler) StopContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
 		return
 	}
 
@@ -1088,13 +1088,13 @@ func (h *ContainerHandler) StopContainer(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Application stopped successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Container stopped successfully"})
 }
 
 func (h *ContainerHandler) RestartContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
 		return
 	}
 
@@ -1109,18 +1109,18 @@ func (h *ContainerHandler) RestartContainer(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Application restarted successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Container restarted successfully"})
 }
 
 func (h *ContainerHandler) DeployContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
 		return
 	}
 
 	if err := h.service.UpdateStatus(id, constants.ContainerStatusDeploying); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to deploy application"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to deploy container"})
 		return
 	}
 
@@ -1132,13 +1132,13 @@ func (h *ContainerHandler) RollbackContainer(c *gin.Context) {
 }
 
 func (h *ContainerHandler) ListEnvVars(c *gin.Context) {
-	appID, err := uuid.Parse(c.Param("id"))
+	containerID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
 		return
 	}
 
-	envVars, err := h.service.ListEnvVars(appID)
+	envVars, err := h.service.ListEnvVars(containerID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch environment variables"})
 		return
@@ -1148,9 +1148,9 @@ func (h *ContainerHandler) ListEnvVars(c *gin.Context) {
 }
 
 func (h *ContainerHandler) CreateEnvVar(c *gin.Context) {
-	appID, err := uuid.Parse(c.Param("id"))
+	containerID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
 		return
 	}
 
@@ -1159,7 +1159,7 @@ func (h *ContainerHandler) CreateEnvVar(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
-	req.ContainerID = &appID
+	req.ContainerID = &containerID
 
 	if err := h.service.CreateEnvVar(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -1582,20 +1582,20 @@ func (h *ContainerInstanceHandler) CreateContainer(c *gin.Context) {
 func (h *ContainerInstanceHandler) ListContainers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-	appIDStr := c.Query("container_id")
+	containerIDStr := c.Query("container_id")
 	nodeIDStr := c.Query("node_id")
 
 	var containers []models.ContainerInstance
 	var total int64
 	var err error
 
-	if appIDStr != "" {
-		appID, err := uuid.Parse(appIDStr)
+	if containerIDStr != "" {
+		containerID, err := uuid.Parse(containerIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
 			return
 		}
-		containers, err = h.service.ListByApplicationID(appID)
+		containers, err = h.service.ListByContainerID(containerID)
 		total = int64(len(containers))
 	} else if nodeIDStr != "" {
 		nodeID, err := uuid.Parse(nodeIDStr)
