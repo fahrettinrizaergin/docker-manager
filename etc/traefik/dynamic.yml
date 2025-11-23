@@ -1,0 +1,6 @@
+http:
+  middlewares:
+    my-traefik-plugin-AdminAPI_WebUI:
+      plugin:
+        traefik-plugin-AdminAPI_WebUI:
+          root: /tmp/
