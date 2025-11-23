@@ -18,6 +18,12 @@ import {
   CircularProgress,
   Menu,
   Avatar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -29,6 +35,8 @@ import {
   Notifications as NotificationsIcon,
   Logout as LogoutIcon,
   Person as PersonIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -49,6 +57,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [loadingOrgs, setLoadingOrgs] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
+  const [openOrgDialog, setOpenOrgDialog] = useState(false);
+  const [openDeleteOrgDialog, setOpenDeleteOrgDialog] = useState(false);
+  const [orgFormData, setOrgFormData] = useState({
+    name: '',
+    description: '',
+  });
   const navigate = useNavigate();
   const { selectedOrganization, setSelectedOrganization, selectedProject, setSelectedProject } = useAppStore();
 
@@ -134,6 +148,71 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     navigate('/settings');
   };
 
+  const handleOpenOrgDialog = () => {
+    setOrgFormData({ name: '', description: '' });
+    setOpenOrgDialog(true);
+  };
+
+  const handleCloseOrgDialog = () => {
+    setOpenOrgDialog(false);
+    setOrgFormData({ name: '', description: '' });
+  };
+
+  const handleCreateOrganization = async () => {
+    try {
+      if (!orgFormData.name.trim()) {
+        toast.error('Organization name is required');
+        return;
+      }
+
+      const response = await api.createOrganization({
+        name: orgFormData.name,
+        description: orgFormData.description,
+        slug: orgFormData.name.toLowerCase().replace(/\s+/g, '-'),
+      });
+
+      toast.success('Organization created successfully');
+      handleCloseOrgDialog();
+      await loadOrganizations();
+      
+      // Select the newly created organization
+      if (response.id) {
+        const newOrg = organizations.find(o => o.id === response.id);
+        if (newOrg) {
+          setSelectedOrganization(newOrg);
+        }
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to create organization');
+    }
+  };
+
+  const handleOpenDeleteOrgDialog = () => {
+    setOpenDeleteOrgDialog(true);
+  };
+
+  const handleCloseDeleteOrgDialog = () => {
+    setOpenDeleteOrgDialog(false);
+  };
+
+  const handleDeleteOrganization = async () => {
+    try {
+      if (!selectedOrganization) {
+        toast.error('No organization selected');
+        return;
+      }
+
+      await api.deleteOrganization(selectedOrganization.id);
+      toast.success('Organization deleted successfully');
+      handleCloseDeleteOrgDialog();
+      
+      // Reload organizations and select the first one
+      await loadOrganizations();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to delete organization');
+    }
+  };
+
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Nodes', icon: <StorageIcon />, path: '/nodes' },
@@ -162,41 +241,63 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             Docker Manager
           </Typography>
           
-          {/* Organization Selector */}
-          <FormControl sx={{ minWidth: 200, mr: 2 }}>
-            <Select
-              value={selectedOrganization?.id || ''}
-              onChange={(e) => handleOrganizationChange(e.target.value)}
-              displayEmpty
-              size="small"
-              sx={{
-                color: 'white',
-                '.MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(255, 255, 255, 0.3)',
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(255, 255, 255, 0.5)',
-                },
-                '.MuiSvgIcon-root': {
+          {/* Organization Selector with Add/Delete buttons */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+            <FormControl sx={{ minWidth: 200 }}>
+              <Select
+                value={selectedOrganization?.id || ''}
+                onChange={(e) => handleOrganizationChange(e.target.value)}
+                displayEmpty
+                size="small"
+                sx={{
                   color: 'white',
-                },
-              }}
-            >
-              {loadingOrgs ? (
-                <MenuItem disabled>
-                  <CircularProgress size={20} />
-                </MenuItem>
-              ) : organizations.length === 0 ? (
-                <MenuItem value="">No organizations</MenuItem>
-              ) : (
-                organizations.map((org) => (
-                  <MenuItem key={org.id} value={org.id}>
-                    {org.name}
+                  '.MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                  },
+                  '.MuiSvgIcon-root': {
+                    color: 'white',
+                  },
+                }}
+              >
+                {loadingOrgs ? (
+                  <MenuItem disabled>
+                    <CircularProgress size={20} />
                   </MenuItem>
-                ))
-              )}
-            </Select>
-          </FormControl>
+                ) : organizations.length === 0 ? (
+                  <MenuItem value="">No organizations</MenuItem>
+                ) : (
+                  organizations.map((org) => (
+                    <MenuItem key={org.id} value={org.id}>
+                      {org.name}
+                    </MenuItem>
+                  ))
+                )}
+              </Select>
+            </FormControl>
+            <IconButton
+              color="inherit"
+              size="small"
+              onClick={handleOpenOrgDialog}
+              sx={{ ml: 1 }}
+              title="Add Organization"
+            >
+              <AddIcon />
+            </IconButton>
+            {selectedOrganization && organizations.length > 1 && (
+              <IconButton
+                color="inherit"
+                size="small"
+                onClick={handleOpenDeleteOrgDialog}
+                sx={{ ml: 0.5 }}
+                title="Delete Organization"
+              >
+                <DeleteIcon />
+              </IconButton>
+            )}
+          </Box>
 
           <Box sx={{ flexGrow: 1 }} />
           
@@ -358,6 +459,54 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <Toolbar />
         {children}
       </Box>
+
+      {/* Create Organization Dialog */}
+      <Dialog open={openOrgDialog} onClose={handleCloseOrgDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Create New Organization</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              label="Organization Name"
+              fullWidth
+              value={orgFormData.name}
+              onChange={(e) => setOrgFormData({ ...orgFormData, name: e.target.value })}
+              required
+              autoFocus
+            />
+            <TextField
+              label="Description"
+              fullWidth
+              multiline
+              rows={3}
+              value={orgFormData.description}
+              onChange={(e) => setOrgFormData({ ...orgFormData, description: e.target.value })}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseOrgDialog}>Cancel</Button>
+          <Button onClick={handleCreateOrganization} variant="contained">
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Organization Dialog */}
+      <Dialog open={openDeleteOrgDialog} onClose={handleCloseDeleteOrgDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Delete Organization</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete <strong>{selectedOrganization?.name}</strong>? 
+            This action cannot be undone and will delete all associated projects and containers.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeleteOrgDialog}>Cancel</Button>
+          <Button onClick={handleDeleteOrganization} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
