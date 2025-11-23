@@ -39,8 +39,8 @@ type Deployment struct {
 	PreviewURL string `json:"preview_url"`
 
 	// Metadata
-	ErrorMessage string `json:"error_message,omitempty"`
-	Metadata     string `gorm:"type:jsonb" json:"metadata"`
+	ErrorMessage string  `json:"error_message,omitempty"`
+	Metadata     *string `gorm:"type:jsonb" json:"metadata,omitempty"`
 
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
@@ -93,12 +93,12 @@ type Webhook struct {
 	Type           string     `gorm:"not null" json:"type"` // gitlab, bitbucket, github, gitea, generic
 	URL            string     `gorm:"not null" json:"url"`
 	Secret         string     `json:"secret,omitempty"`
-	Events         string     `gorm:"type:jsonb" json:"events"` // push, pull_request, tag, release
+	Events         *string    `gorm:"type:jsonb" json:"events,omitempty"` // push, pull_request, tag, release
 	IsActive       bool       `gorm:"default:true" json:"is_active"`
 
 	// Trigger settings
-	AutoDeploy bool   `gorm:"default:true" json:"auto_deploy"`
-	Branches   string `gorm:"type:jsonb" json:"branches"` // Branches to trigger on
+	AutoDeploy bool    `gorm:"default:true" json:"auto_deploy"`
+	Branches   *string `gorm:"type:jsonb" json:"branches,omitempty"` // Branches to trigger on
 
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
@@ -166,7 +166,7 @@ type Template struct {
 	DockerCompose string         `gorm:"type:text;not null" json:"docker_compose"`
 	EnvTemplate   string         `gorm:"type:text" json:"env_template"`
 	Readme        string         `gorm:"type:text" json:"readme"`
-	Tags          string         `gorm:"type:jsonb" json:"tags"`
+	Tags          *string        `gorm:"type:jsonb" json:"tags,omitempty"`
 	IsOfficial    bool           `gorm:"default:false" json:"is_official"`
 	IsPublic      bool           `gorm:"default:true" json:"is_public"`
 	Downloads     int            `gorm:"default:0" json:"downloads"`
@@ -200,7 +200,7 @@ type Notification struct {
 	DeploymentID  *uuid.UUID `gorm:"type:uuid" json:"deployment_id"`
 
 	// Metadata
-	Metadata string `gorm:"type:jsonb" json:"metadata"`
+	Metadata *string `gorm:"type:jsonb" json:"metadata,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -230,7 +230,7 @@ type Activity struct {
 	Description    string    `json:"description"`
 	IPAddress      string    `json:"ip_address"`
 	UserAgent      string    `json:"user_agent"`
-	Metadata       string    `gorm:"type:jsonb" json:"metadata"`
+	Metadata       *string   `gorm:"type:jsonb" json:"metadata,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 
 	// Relationships

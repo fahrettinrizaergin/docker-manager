@@ -38,7 +38,7 @@ type Node struct {
 	LastPingAt *time.Time `json:"last_ping_at"`
 
 	// Labels
-	Labels string `gorm:"type:jsonb" json:"labels"`
+	Labels *string `gorm:"type:jsonb" json:"labels,omitempty"`
 
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
@@ -64,8 +64,8 @@ type Container struct {
 	ContainerID   string    `gorm:"not null;index" json:"container_id"` // Docker container ID
 	Name          string    `gorm:"not null" json:"name"`
 	Image         string    `gorm:"not null" json:"image"`
-	Status        string    `json:"status"`                  // running, stopped, paused, dead, restarting
-	State         string    `gorm:"type:jsonb" json:"state"` // Detailed state from Docker
+	Status        string    `json:"status"`                   // running, stopped, paused, dead, restarting
+	State         *string   `gorm:"type:jsonb" json:"state,omitempty"` // Detailed state from Docker
 
 	// Runtime info
 	StartedAt    *time.Time `json:"started_at"`
@@ -73,9 +73,9 @@ type Container struct {
 	RestartCount int        `gorm:"default:0" json:"restart_count"`
 
 	// Network
-	IPAddress string `json:"ip_address"`
-	Ports     string `gorm:"type:jsonb" json:"ports"`
-	Networks  string `gorm:"type:jsonb" json:"networks"`
+	IPAddress string  `json:"ip_address"`
+	Ports     *string `gorm:"type:jsonb" json:"ports,omitempty"`
+	Networks  *string `gorm:"type:jsonb" json:"networks,omitempty"`
 
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
@@ -103,8 +103,8 @@ type Volume struct {
 	Driver        string         `gorm:"default:'local'" json:"driver"`
 	MountPath     string         `json:"mount_path"`
 	HostPath      string         `json:"host_path"`
-	Options       string         `gorm:"type:jsonb" json:"options"`
-	Labels        string         `gorm:"type:jsonb" json:"labels"`
+	Options       *string        `gorm:"type:jsonb" json:"options,omitempty"`
+	Labels        *string        `gorm:"type:jsonb" json:"labels,omitempty"`
 	Size          int64          `json:"size"`
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
@@ -132,8 +132,8 @@ type Network struct {
 	Scope      string         `json:"scope"`
 	Internal   bool           `gorm:"default:false" json:"internal"`
 	Attachable bool           `gorm:"default:false" json:"attachable"`
-	Options    string         `gorm:"type:jsonb" json:"options"`
-	Labels     string         `gorm:"type:jsonb" json:"labels"`
+	Options    *string        `gorm:"type:jsonb" json:"options,omitempty"`
+	Labels     *string        `gorm:"type:jsonb" json:"labels,omitempty"`
 	CreatedAt  time.Time      `json:"created_at"`
 	UpdatedAt  time.Time      `json:"updated_at"`
 	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
@@ -162,7 +162,7 @@ type Image struct {
 	// Security scan results
 	Scanned         bool       `gorm:"default:false" json:"scanned"`
 	ScanDate        *time.Time `json:"scan_date"`
-	Vulnerabilities string     `gorm:"type:jsonb" json:"vulnerabilities"`
+	Vulnerabilities *string    `gorm:"type:jsonb" json:"vulnerabilities,omitempty"`
 	ScanStatus      string     `json:"scan_status"` // passed, failed, pending
 
 	CreatedAt time.Time      `json:"created_at"`

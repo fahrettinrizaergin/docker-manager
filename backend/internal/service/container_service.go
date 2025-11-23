@@ -90,17 +90,17 @@ func (s *ContainerService) Update(id uuid.UUID, updates map[string]interface{}) 
 	if status, ok := updates["status"].(string); ok {
 		container.Status = status
 	}
-	if state, ok := updates["state"].(string); ok {
-		container.State = state
+	if state, ok := updates["state"].(string); ok && state != "" {
+		container.State = &state
 	}
 	if ipAddress, ok := updates["ip_address"].(string); ok {
 		container.IPAddress = ipAddress
 	}
-	if ports, ok := updates["ports"].(string); ok {
-		container.Ports = ports
+	if ports, ok := updates["ports"].(string); ok && ports != "" {
+		container.Ports = &ports
 	}
-	if networks, ok := updates["networks"].(string); ok {
-		container.Networks = networks
+	if networks, ok := updates["networks"].(string); ok && networks != "" {
+		container.Networks = &networks
 	}
 	if restartCount, ok := updates["restart_count"].(int); ok {
 		container.RestartCount = restartCount
