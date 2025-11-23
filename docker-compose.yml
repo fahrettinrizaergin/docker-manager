@@ -105,8 +105,8 @@ services:
       - "8081:8080"  # Traefik dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./etc/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
       - ./etc/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./etc/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
     networks:
       - docker-manager-network
       - web
