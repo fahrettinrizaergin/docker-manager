@@ -63,9 +63,9 @@ func (s *ContainerInstanceService) List(page, pageSize int) ([]models.ContainerI
 	return s.repo.List(pageSize, offset)
 }
 
-// ListByApplicationID retrieves containers for a specific application
-func (s *ContainerInstanceService) ListByApplicationID(appID uuid.UUID) ([]models.ContainerInstance, error) {
-	return s.repo.ListByApplicationID(appID)
+// ListByContainerID retrieves container instances for a specific container
+func (s *ContainerInstanceService) ListByContainerID(containerID uuid.UUID) ([]models.ContainerInstance, error) {
+	return s.repo.ListByContainerID(containerID)
 }
 
 // ListByNodeID retrieves containers for a specific node
