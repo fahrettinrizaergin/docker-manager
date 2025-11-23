@@ -160,20 +160,26 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const handleCreateOrganization = async () => {
     try {
-      if (!orgFormData.name.trim()) {
+      const trimmedName = orgFormData.name.trim();
+      if (!trimmedName) {
         toast.error('Organization name is required');
         return;
       }
 
       // Generate a clean slug: trim, lowercase, replace spaces with hyphens, remove special chars
-      const slug = orgFormData.name
-        .trim()
+      const slug = trimmedName
         .toLowerCase()
         .replace(/\s+/g, '-')
         .replace(/[^a-z0-9-]/g, '');
 
+      // Ensure slug is not empty after sanitization
+      if (!slug) {
+        toast.error('Organization name must contain at least one alphanumeric character');
+        return;
+      }
+
       const response = await api.createOrganization({
-        name: orgFormData.name.trim(),
+        name: trimmedName,
         description: orgFormData.description,
         slug: slug,
       });
@@ -218,6 +224,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       toast.error(error.response?.data?.error || 'Failed to delete organization');
     }
   };
+
+  // Check if organization can be deleted (must have at least one organization remaining)
+  const canDeleteOrganization = selectedOrganization && organizations.length > 1;
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
@@ -292,7 +301,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             >
               <AddIcon />
             </IconButton>
-            {selectedOrganization && organizations.length > 1 && (
+            {canDeleteOrganization && (
               <IconButton
                 color="inherit"
                 size="small"
