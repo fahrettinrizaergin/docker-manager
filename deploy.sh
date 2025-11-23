@@ -6,6 +6,11 @@ echo "Starting deployment..."
 echo "Pulling latest changes..."
 git pull origin main || { echo "Git pull failed"; exit 1; }
 
+# Cleanup Docker resources to free up space
+echo "Cleaning up unused Docker resources..."
+docker image prune -f
+docker builder prune -f
+
 # Stop containers
 echo "Stopping containers..."
 docker-compose down --remove-orphans || true
