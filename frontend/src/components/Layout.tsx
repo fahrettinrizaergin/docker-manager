@@ -165,22 +165,28 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         return;
       }
 
+      // Generate a clean slug: trim, lowercase, replace spaces with hyphens, remove special chars
+      const slug = orgFormData.name
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '');
+
       const response = await api.createOrganization({
-        name: orgFormData.name,
+        name: orgFormData.name.trim(),
         description: orgFormData.description,
-        slug: orgFormData.name.toLowerCase().replace(/\s+/g, '-'),
+        slug: slug,
       });
 
       toast.success('Organization created successfully');
       handleCloseOrgDialog();
+      
+      // Reload organizations first, then select the new one
       await loadOrganizations();
       
-      // Select the newly created organization
+      // Select the newly created organization using the response data
       if (response.id) {
-        const newOrg = organizations.find(o => o.id === response.id);
-        if (newOrg) {
-          setSelectedOrganization(newOrg);
-        }
+        setSelectedOrganization(response);
       }
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to create organization');
