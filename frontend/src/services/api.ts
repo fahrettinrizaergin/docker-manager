@@ -10,13 +10,8 @@ const getApiUrl = () => {
     return envUrl;
   }
   
-  // In production build, use empty string for relative URLs
-  if (process.env.NODE_ENV === 'production') {
-    return '';
-  }
-  
-  // Default to localhost for development
-  return 'http://localhost:8080';
+  // Default to relative path /api/v1
+  return '/api/v1';
 };
 
 const API_URL = getApiUrl();
@@ -26,7 +21,7 @@ class ApiService {
 
   constructor() {
     this.client = axios.create({
-      baseURL: `${API_URL}/api/v1`,
+      baseURL: API_URL,
       headers: {
         'Content-Type': 'application/json',
       },
