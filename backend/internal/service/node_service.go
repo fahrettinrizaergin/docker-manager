@@ -23,6 +23,13 @@ func NewNodeService(repo *repository.NodeRepository) *NodeService {
 }
 
 func (s *NodeService) Create(node *models.Node) error {
+	if node.OrganizationID == uuid.Nil {
+		orgID, err := s.repo.GetDefaultOrganizationID()
+		if err != nil {
+			return fmt.Errorf("failed to assign organization to node: %w", err)
+		}
+		node.OrganizationID = orgID
+	}
 	return s.repo.Create(node)
 }
 
