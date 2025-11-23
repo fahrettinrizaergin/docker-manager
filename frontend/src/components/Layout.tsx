@@ -90,7 +90,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       const response = await api.getOrganizations();
       const orgs = response.data || [];
       setOrganizations(orgs);
-      
+
       // If no organization is selected, select the first one
       if (!selectedOrganization && orgs.length > 0) {
         setSelectedOrganization(orgs[0]);
@@ -187,10 +187,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       toast.success('Organization created successfully');
       handleCloseOrgDialog();
-      
+
       // Reload organizations first, then select the new one
       await loadOrganizations();
-      
+
       // Select the newly created organization using the response data
       if (response.id) {
         setSelectedOrganization(response);
@@ -218,7 +218,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       await api.deleteOrganization(selectedOrganization.id);
       toast.success('Organization deleted successfully');
       handleCloseDeleteOrgDialog();
-      
+
       // Reload organizations and select the first one
       await loadOrganizations();
     } catch (error: any) {
@@ -232,7 +232,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Organizations', icon: <BusinessIcon />, path: '/organizations' },
-    { text: 'Nodes', icon: <StorageIcon />, path: '/nodes' }, 
+    { text: 'Nodes', icon: <StorageIcon />, path: '/nodes' },
   ];
 
   return (
@@ -256,7 +256,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <Typography variant="h6" noWrap component="div" sx={{ mr: 3 }}>
             Docker Manager
           </Typography>
-          
+
           {/* Organization Selector with Add/Delete buttons */}
           <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
             <FormControl sx={{ minWidth: 200 }}>
@@ -305,7 +305,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     )}
                   </Select>
                 )
-              } 
+              }
             </FormControl>
             {/* <IconButton
               color="inherit"
@@ -330,11 +330,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </Box>
 
           <Box sx={{ flexGrow: 1 }} />
-          
+
           <IconButton color="inherit">
             <NotificationsIcon />
           </IconButton>
-          
+
           <IconButton onClick={handleOpenUserMenu} color="inherit">
             {user.avatar ? (
               <Avatar src={user.avatar} alt={user.username} sx={{ width: 32, height: 32 }} />
@@ -344,7 +344,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </Avatar>
             )}
           </IconButton>
-          
+
           <Menu
             sx={{ mt: '45px' }}
             id="menu-appbar"
@@ -406,31 +406,45 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <ListItemText primary={item.text} />
                 </ListItemButton>
               </ListItem>
-            ))} 
-              <ListItem disablePadding>
-                <ListItemButton onClick={() => navigate('/settings')}>
-                  <ListItemIcon>
-                    <SettingsIcon />
-                  </ListItemIcon>
-                  <ListItemText primary="Settings" />
-                </ListItemButton>
-              </ListItem> 
+            ))}
+            <ListItem disablePadding>
+              <ListItemButton onClick={() => navigate('/settings')}>
+                <ListItemIcon>
+                  <SettingsIcon />
+                </ListItemIcon>
+                <ListItemText primary="Settings" />
+              </ListItemButton>
+            </ListItem>
           </List>
-          
+
           {/* Projects Section */}
           {selectedOrganization && (
             <>
               <Divider />
               <List>
                 <ListItem>
-                  <ListItemText 
-                    primary="Projects" 
-                    primaryTypographyProps={{ 
-                      variant: 'subtitle2', 
+                  <ListItemText
+                    primary="Projects"
+                    primaryTypographyProps={{
+                      variant: 'subtitle2',
                       color: 'text.secondary',
                       fontWeight: 'bold',
-                    }} 
+                    }}
                   />
+                  <ListItemButton
+                    onClick={() => navigate('/projects')}
+                    sx={{
+                      width: 'auto',
+                      minWidth: 'auto',
+                      maxWidth: '35px',
+                      px: 1,
+                      py: 0.5,
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 'auto' }}>
+                      <AddIcon fontSize="small" />
+                    </ListItemIcon>
+                  </ListItemButton>
                 </ListItem>
                 {loadingProjects ? (
                   <ListItem>
@@ -440,17 +454,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   </ListItem>
                 ) : projects.length === 0 ? (
                   <ListItem>
-                    <ListItemText 
-                      secondary="No projects" 
-                      secondaryTypographyProps={{ 
-                        align: 'center' 
-                      }} 
+                    <ListItemText
+                      secondary="No projects"
+                      secondaryTypographyProps={{
+                        align: 'center'
+                      }}
                     />
                   </ListItem>
                 ) : (
                   projects.map((project) => (
                     <ListItem key={project.id} disablePadding>
-                      <ListItemButton 
+                      <ListItemButton
                         onClick={() => handleProjectClick(project)}
                         selected={selectedProject?.id === project.id}
                       >
@@ -464,7 +478,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 )}
               </List>
             </>
-          )} 
+          )}
         </Box>
       </Drawer>
 
@@ -522,7 +536,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <DialogTitle>Delete Organization</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete <strong>{selectedOrganization?.name}</strong>? 
+            Are you sure you want to delete <strong>{selectedOrganization?.name}</strong>?
             This action cannot be undone and will delete all associated projects and containers.
           </Typography>
         </DialogContent>
