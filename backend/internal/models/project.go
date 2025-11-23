@@ -95,7 +95,7 @@ type Application struct {
 
 	// Networking
 	Domain       string  `json:"domain"`
-	Domains      *string `gorm:"type:jsonb" json:"domains,omitempty"` // Additional domains
+	Domains      *string `gorm:"type:jsonb" json:"domains,omitempty"` // Additional domains (JSON array). Uses *string to allow NULL in DB
 	Port         int     `json:"port"`
 	InternalPort int     `json:"internal_port"`
 	Protocol     string  `gorm:"default:'http'" json:"protocol"` // http, https, tcp, udp
@@ -107,7 +107,7 @@ type Application struct {
 	MemoryReserve int64   `json:"memory_reserve"`
 
 	// Health Check
-	HealthCheck *string `gorm:"type:jsonb" json:"health_check,omitempty"`
+	HealthCheck *string `gorm:"type:jsonb" json:"health_check,omitempty"` // JSON object. Uses *string to allow NULL in DB
 
 	// Auto Scaling
 	AutoScale      bool    `gorm:"default:false" json:"auto_scale"`
@@ -121,8 +121,8 @@ type Application struct {
 
 	// Settings
 	RestartPolicy string  `gorm:"default:'unless-stopped'" json:"restart_policy"`
-	Labels        *string `gorm:"type:jsonb" json:"labels,omitempty"`
-	Capabilities  *string `gorm:"type:jsonb" json:"capabilities,omitempty"`
+	Labels        *string `gorm:"type:jsonb" json:"labels,omitempty"`       // JSON object. Uses *string to allow NULL in DB
+	Capabilities  *string `gorm:"type:jsonb" json:"capabilities,omitempty"` // JSON object. Uses *string to allow NULL in DB
 
 	// Metadata
 	CreatedAt time.Time      `json:"created_at"`

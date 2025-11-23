@@ -104,7 +104,7 @@ func (s *OrganizationService) Update(id uuid.UUID, updates map[string]interface{
 	if active, ok := updates["is_active"].(bool); ok {
 		org.IsActive = active
 	}
-	if settings, ok := updates["settings"].(string); ok {
+	if settings, ok := updates["settings"].(string); ok && settings != "" {
 		org.Settings = &settings
 	}
 

@@ -107,7 +107,7 @@ func (s *ProjectService) Update(id uuid.UUID, updates map[string]interface{}) (*
 		}
 		project.Status = status
 	}
-	if settings, ok := updates["settings"].(string); ok {
+	if settings, ok := updates["settings"].(string); ok && settings != "" {
 		project.Settings = &settings
 	}
 
