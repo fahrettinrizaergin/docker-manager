@@ -9,11 +9,11 @@ import 'react-toastify/dist/ReactToastify.css';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import PasswordReset from './pages/PasswordReset';
-import Explorer from './pages/Explorer';
 import Organizations from './pages/Organizations';
 import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
-import Applications from './pages/Applications';
+import Containers from './pages/Containers';
+import ContainerConfiguration from './pages/ContainerConfiguration';
 import Nodes from './pages/Nodes';
 import Deployments from './pages/Deployments';
 import Templates from './pages/Templates';
@@ -58,11 +58,11 @@ const App: React.FC = () => {
             
             {/* Protected routes */}
             <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-            <Route path="/explorer" element={<PrivateRoute><Explorer /></PrivateRoute>} />
             <Route path="/organizations" element={<PrivateRoute><Organizations /></PrivateRoute>} />
             <Route path="/projects" element={<PrivateRoute><Projects /></PrivateRoute>} />
             <Route path="/projects/:projectId" element={<PrivateRoute><ProjectDetail /></PrivateRoute>} />
-            <Route path="/applications" element={<PrivateRoute><Applications /></PrivateRoute>} />
+            <Route path="/project/:projectId/environment/:containerId" element={<PrivateRoute><ContainerConfiguration /></PrivateRoute>} />
+            <Route path="/containers" element={<PrivateRoute><Containers /></PrivateRoute>} />
             <Route path="/nodes" element={<PrivateRoute><Nodes /></PrivateRoute>} />
             <Route path="/deployments" element={<PrivateRoute><Deployments /></PrivateRoute>} />
             <Route path="/templates" element={<PrivateRoute><Templates /></PrivateRoute>} />

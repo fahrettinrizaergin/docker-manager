@@ -17,28 +17,98 @@ import {
   Grid,
   Card,
   CardContent,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  MenuItem,
+  Menu,
+  Tabs,
+  Tab,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import {
   Folder as FolderIcon,
   Refresh as RefreshIcon,
+  Delete as DeleteIcon,
+  MoreVert as MoreVertIcon,
   PlayArrow as PlayIcon,
   Stop as StopIcon,
   RestartAlt as RestartIcon,
+  Description as LogsIcon,
+  Settings as ConfigIcon,
 } from '@mui/icons-material';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { Project, Container, Application } from '../types';
 import { useAppStore } from '../store/useAppStore';
 
-const ProjectDetail: React.FC = () => {
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`create-tabpanel-${index}`}
+      aria-labelledby={`create-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+    </div>
+  );
+}
+
+const ProjectDetailEnhanced: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
   const { selectedProject, setSelectedProject } = useAppStore();
   const [project, setProject] = useState<Project | null>(selectedProject);
   const [applications, setApplications] = useState<Application[]>([]);
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Creation dialog
+  const [openCreateDialog, setOpenCreateDialog] = useState(false);
+  const [createTabValue, setCreateTabValue] = useState(0);
+  const [createFormData, setCreateFormData] = useState<any>({
+    // Application
+    name: '',
+    app_name: '',
+    // Database
+    db_type: 'postgresql',
+    db_name: '',
+    db_user: '',
+    db_password: '',
+    db_root_password: '',
+    db_image: '',
+    description: '',
+    // Compose
+    compose_type: 'docker-compose',
+    compose_content: '',
+  });
+
+  // Container actions menu
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
+
+  // Logs dialog
+  const [openLogsDialog, setOpenLogsDialog] = useState(false);
+  const [logs, setLogs] = useState('');
+
+  // Delete confirmation dialog
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [deleteWithVolumes, setDeleteWithVolumes] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'container' | 'project', id: string } | null>(null);
 
   useEffect(() => {
     if (projectId) {
@@ -51,19 +121,16 @@ const ProjectDetail: React.FC = () => {
     try {
       setLoading(true);
       
-      // Load project details
       if (!project || project.id !== projectId) {
         const projectResponse = await api.getProject(projectId!);
         setProject(projectResponse.data);
         setSelectedProject(projectResponse.data);
       }
       
-      // Load applications for the project
       const appsResponse = await api.getApplications({ project_id: projectId });
       const apps = appsResponse.data || [];
       setApplications(apps);
       
-      // Load containers for all applications in the project
       const containerPromises = apps.map((app: Application) => 
         api.getContainers({ application_id: app.id })
       );
@@ -94,6 +161,94 @@ const ProjectDetail: React.FC = () => {
     }
   };
 
+  const handleOpenCreateDialog = () => {
+    setOpenCreateDialog(true);
+  };
+
+  const handleCloseCreateDialog = () => {
+    setOpenCreateDialog(false);
+    setCreateTabValue(0);
+    setCreateFormData({
+      name: '',
+      app_name: '',
+      db_type: 'postgresql',
+      db_name: '',
+      db_user: '',
+      db_password: '',
+      db_root_password: '',
+      db_image: '',
+      description: '',
+      compose_type: 'docker-compose',
+      compose_content: '',
+    });
+  };
+
+  const handleCreateSubmit = async () => {
+    try {
+      // Based on the tab, create different types of containers
+      switch (createTabValue) {
+        case 0: // Application
+          await api.createApplication({
+            project_id: projectId,
+            name: createFormData.name,
+            slug: createFormData.app_name || createFormData.name.toLowerCase().replace(/\s+/g, '-'),
+            type: 'container',
+          });
+          toast.success('Application created successfully');
+          break;
+        case 1: // Database
+          // Create database container based on type
+          await api.createApplication({
+            project_id: projectId,
+            name: createFormData.name,
+            slug: createFormData.name.toLowerCase().replace(/\s+/g, '-'),
+            type: 'container',
+            image: createFormData.db_image || getDatabaseDefaultImage(createFormData.db_type),
+            description: createFormData.description,
+          });
+          toast.success('Database container created successfully');
+          break;
+        case 2: // Compose
+          await api.createApplication({
+            project_id: projectId,
+            name: createFormData.name,
+            slug: createFormData.app_name || createFormData.name.toLowerCase().replace(/\s+/g, '-'),
+            type: 'docker-compose',
+            compose_file: createFormData.compose_content,
+          });
+          toast.success('Compose application created successfully');
+          break;
+        case 3: // Template
+          // This would deploy from a template
+          toast.info('Template deployment not yet implemented');
+          break;
+      }
+      handleCloseCreateDialog();
+      loadProjectDetails();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to create container');
+    }
+  };
+
+  const getDatabaseDefaultImage = (type: string) => {
+    switch (type) {
+      case 'postgresql': return 'postgres:latest';
+      case 'mongodb': return 'mongo:latest';
+      case 'mariadb': return 'mariadb:latest';
+      case 'redis': return 'redis:latest';
+      default: return '';
+    }
+  };
+
+  const handleContainerMenuOpen = (event: React.MouseEvent<HTMLElement>, container: Container) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedContainer(container);
+  };
+
+  const handleContainerMenuClose = () => {
+    setAnchorEl(null);
+  };
+
   const handleStartContainer = async (id: string) => {
     try {
       await api.startContainer(id);
@@ -122,6 +277,54 @@ const ProjectDetail: React.FC = () => {
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to restart container');
     }
+  };
+
+  const handleViewLogs = async (containerId: string) => {
+    handleContainerMenuClose();
+    setOpenLogsDialog(true);
+    setLogs('Loading logs...');
+    // In a real implementation, this would fetch actual logs
+    // For now, show placeholder
+    setTimeout(() => {
+      setLogs('Container logs would appear here...\nThis feature requires backend implementation.');
+    }, 500);
+  };
+
+  const handleOpenDeleteDialog = (type: 'container' | 'project', id: string) => {
+    setDeleteTarget({ type, id });
+    setOpenDeleteDialog(true);
+    handleContainerMenuClose();
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setOpenDeleteDialog(false);
+    setDeleteWithVolumes(false);
+    setDeleteTarget(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+
+    try {
+      if (deleteTarget.type === 'container') {
+        // In real implementation, pass deleteWithVolumes parameter
+        await api.deleteContainer(deleteTarget.id);
+        toast.success('Container deleted successfully');
+        refreshContainers();
+      } else if (deleteTarget.type === 'project') {
+        await api.deleteProject(deleteTarget.id);
+        toast.success('Project deleted successfully');
+        navigate('/projects');
+      }
+      handleCloseDeleteDialog();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to delete');
+    }
+  };
+
+  const handleOpenConfiguration = (containerId: string) => {
+    handleContainerMenuClose();
+    navigate(`/project/${projectId}/environment/${containerId}`);
   };
 
   const getStatusColor = (status: string) => {
@@ -183,13 +386,23 @@ const ProjectDetail: React.FC = () => {
               </Typography>
             )}
           </Box>
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={loadProjectDetails}
-          >
-            Refresh
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={handleOpenCreateDialog}
+            >
+              Refresh
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteIcon />}
+              onClick={() => handleOpenDeleteDialog('project', project.id)}
+            >
+              Delete
+            </Button>
+          </Box>
         </Box>
 
         {/* Project Summary */}
@@ -272,29 +485,9 @@ const ProjectDetail: React.FC = () => {
                       <TableCell align="right">
                         <IconButton
                           size="small"
-                          color="success"
-                          onClick={() => handleStartContainer(container.id)}
-                          disabled={container.status?.toLowerCase() === 'running'}
-                          title="Start"
+                          onClick={(e) => handleContainerMenuOpen(e, container)}
                         >
-                          <PlayIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => handleStopContainer(container.id)}
-                          disabled={container.status?.toLowerCase() !== 'running'}
-                          title="Stop"
-                        >
-                          <StopIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="info"
-                          onClick={() => handleRestartContainer(container.id)}
-                          title="Restart"
-                        >
-                          <RestartIcon />
+                          <MoreVertIcon />
                         </IconButton>
                       </TableCell>
                     </TableRow>
@@ -305,51 +498,235 @@ const ProjectDetail: React.FC = () => {
           )}
         </Paper>
 
-        {/* Applications Table */}
-        <Paper>
-          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-            <Typography variant="h6">Applications</Typography>
-          </Box>
-          {applications.length === 0 ? (
-            <Box sx={{ p: 4, textAlign: 'center' }}>
-              <Typography variant="body1" color="text.secondary">
-                No applications found in this project
+        {/* Container Actions Menu */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleContainerMenuClose}
+        >
+          <MenuItem onClick={() => selectedContainer && handleStartContainer(selectedContainer.id)}>
+            <PlayIcon fontSize="small" sx={{ mr: 1 }} /> Start
+          </MenuItem>
+          <MenuItem onClick={() => selectedContainer && handleStopContainer(selectedContainer.id)}>
+            <StopIcon fontSize="small" sx={{ mr: 1 }} /> Stop
+          </MenuItem>
+          <MenuItem onClick={() => selectedContainer && handleRestartContainer(selectedContainer.id)}>
+            <RestartIcon fontSize="small" sx={{ mr: 1 }} /> Restart
+          </MenuItem>
+          <MenuItem onClick={() => selectedContainer && handleViewLogs(selectedContainer.id)}>
+            <LogsIcon fontSize="small" sx={{ mr: 1 }} /> Logs
+          </MenuItem>
+          <MenuItem onClick={() => selectedContainer && handleOpenConfiguration(selectedContainer.id)}>
+            <ConfigIcon fontSize="small" sx={{ mr: 1 }} /> Configuration
+          </MenuItem>
+          <MenuItem onClick={() => selectedContainer && handleOpenDeleteDialog('container', selectedContainer.id)}>
+            <DeleteIcon fontSize="small" sx={{ mr: 1 }} /> Delete
+          </MenuItem>
+        </Menu>
+
+        {/* Create Container Dialog */}
+        <Dialog open={openCreateDialog} onClose={handleCloseCreateDialog} maxWidth="md" fullWidth>
+          <DialogTitle>Create New Container</DialogTitle>
+          <DialogContent>
+            <Tabs value={createTabValue} onChange={(e, v) => setCreateTabValue(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <Tab label="Application" />
+              <Tab label="Database" />
+              <Tab label="Compose" />
+              <Tab label="Template" />
+            </Tabs>
+
+            <TabPanel value={createTabValue} index={0}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <TextField
+                  label="Name"
+                  fullWidth
+                  value={createFormData.name}
+                  onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                  helperText="Display name for the application"
+                />
+                <TextField
+                  label="App Name"
+                  fullWidth
+                  value={createFormData.app_name}
+                  onChange={(e) => setCreateFormData({ ...createFormData, app_name: e.target.value })}
+                  helperText="Used in Swarm (project name will be used as prefix)"
+                />
+              </Box>
+            </TabPanel>
+
+            <TabPanel value={createTabValue} index={1}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <TextField
+                  select
+                  label="Database Type"
+                  fullWidth
+                  value={createFormData.db_type}
+                  onChange={(e) => setCreateFormData({ ...createFormData, db_type: e.target.value })}
+                >
+                  <MenuItem value="postgresql">PostgreSQL</MenuItem>
+                  <MenuItem value="mongodb">MongoDB</MenuItem>
+                  <MenuItem value="mariadb">MariaDB</MenuItem>
+                  <MenuItem value="redis">Redis</MenuItem>
+                </TextField>
+                <TextField
+                  label="Name"
+                  fullWidth
+                  value={createFormData.name}
+                  onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                />
+                <TextField
+                  label="Description"
+                  fullWidth
+                  multiline
+                  rows={2}
+                  value={createFormData.description}
+                  onChange={(e) => setCreateFormData({ ...createFormData, description: e.target.value })}
+                />
+                {(createFormData.db_type === 'postgresql' || createFormData.db_type === 'mariadb') && (
+                  <TextField
+                    label="Database Name"
+                    fullWidth
+                    value={createFormData.db_name}
+                    onChange={(e) => setCreateFormData({ ...createFormData, db_name: e.target.value })}
+                  />
+                )}
+                <TextField
+                  label="User"
+                  fullWidth
+                  value={createFormData.db_user}
+                  onChange={(e) => setCreateFormData({ ...createFormData, db_user: e.target.value })}
+                />
+                <TextField
+                  label="Password"
+                  type="password"
+                  fullWidth
+                  value={createFormData.db_password}
+                  onChange={(e) => setCreateFormData({ ...createFormData, db_password: e.target.value })}
+                />
+                {createFormData.db_type === 'mariadb' && (
+                  <TextField
+                    label="Root Password"
+                    type="password"
+                    fullWidth
+                    value={createFormData.db_root_password}
+                    onChange={(e) => setCreateFormData({ ...createFormData, db_root_password: e.target.value })}
+                  />
+                )}
+                <TextField
+                  label="Image"
+                  fullWidth
+                  value={createFormData.db_image}
+                  onChange={(e) => setCreateFormData({ ...createFormData, db_image: e.target.value })}
+                  placeholder={getDatabaseDefaultImage(createFormData.db_type)}
+                  helperText="Leave empty for default image"
+                />
+              </Box>
+            </TabPanel>
+
+            <TabPanel value={createTabValue} index={2}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <TextField
+                  label="Name"
+                  fullWidth
+                  value={createFormData.name}
+                  onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                />
+                <TextField
+                  label="App Name"
+                  fullWidth
+                  value={createFormData.app_name}
+                  onChange={(e) => setCreateFormData({ ...createFormData, app_name: e.target.value })}
+                  helperText="Used in Swarm"
+                />
+                <TextField
+                  select
+                  label="Compose Type"
+                  fullWidth
+                  value={createFormData.compose_type}
+                  onChange={(e) => setCreateFormData({ ...createFormData, compose_type: e.target.value })}
+                >
+                  <MenuItem value="docker-compose">Docker Compose</MenuItem>
+                  <MenuItem value="stack">Stack</MenuItem>
+                </TextField>
+                <TextField
+                  label="Compose Content"
+                  fullWidth
+                  multiline
+                  rows={10}
+                  value={createFormData.compose_content}
+                  onChange={(e) => setCreateFormData({ ...createFormData, compose_content: e.target.value })}
+                  placeholder="version: '3.8'\nservices:\n  ..."
+                />
+              </Box>
+            </TabPanel>
+
+            <TabPanel value={createTabValue} index={3}>
+              <Box sx={{ p: 2, textAlign: 'center' }}>
+                <Typography variant="body1" color="text.secondary">
+                  Template deployment will show a list of predefined applications with a "Create" button for each.
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  This feature requires backend implementation.
+                </Typography>
+              </Box>
+            </TabPanel>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseCreateDialog}>Cancel</Button>
+            <Button onClick={handleCreateSubmit} variant="contained">
+              Create
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Logs Dialog */}
+        <Dialog open={openLogsDialog} onClose={() => setOpenLogsDialog(false)} maxWidth="lg" fullWidth>
+          <DialogTitle>Container Logs</DialogTitle>
+          <DialogContent>
+            <Paper sx={{ p: 2, bgcolor: '#1e1e1e', color: '#fff', fontFamily: 'monospace', maxHeight: 500, overflow: 'auto' }}>
+              <pre>{logs}</pre>
+            </Paper>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenLogsDialog(false)}>Close</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={openDeleteDialog} onClose={handleCloseDeleteDialog}>
+          <DialogTitle>Confirm Delete</DialogTitle>
+          <DialogContent>
+            <Typography>
+              {deleteTarget?.type === 'container' 
+                ? 'Are you sure you want to delete this container?' 
+                : 'Are you sure you want to delete this project? This will remove all containers and data.'}
+            </Typography>
+            {selectedContainer?.status?.toLowerCase() === 'running' && (
+              <Typography color="warning.main" sx={{ mt: 2 }}>
+                Warning: This container is currently running!
               </Typography>
-            </Box>
-          ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Type</TableCell>
-                    <TableCell>Image</TableCell>
-                    <TableCell>Status</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {applications.map((app) => (
-                    <TableRow key={app.id}>
-                      <TableCell>{app.name}</TableCell>
-                      <TableCell>{app.type}</TableCell>
-                      <TableCell>{app.image ? `${app.image}:${app.tag}` : '-'}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={app.status}
-                          color={getStatusColor(app.status) as any}
-                          size="small"
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </Paper>
+            )}
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={deleteWithVolumes}
+                  onChange={(e) => setDeleteWithVolumes(e.target.checked)}
+                />
+              }
+              label="Also delete volumes"
+              sx={{ mt: 2 }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDeleteDialog}>Cancel</Button>
+            <Button onClick={handleConfirmDelete} variant="contained" color="error">
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
       </MuiContainer>
     </Layout>
   );
 };
 
-export default ProjectDetail;
+export default ProjectDetailEnhanced;
