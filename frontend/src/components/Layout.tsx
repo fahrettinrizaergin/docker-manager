@@ -16,6 +16,8 @@ import {
   MenuItem,
   FormControl,
   CircularProgress,
+  Menu,
+  Avatar,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -28,6 +30,8 @@ import {
   Notifications as NotificationsIcon,
   AccountCircle as AccountCircleIcon,
   ExploreOutlined as ExploreIcon,
+  Logout as LogoutIcon,
+  Person as PersonIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -47,8 +51,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
+  const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
   const { selectedOrganization, setSelectedOrganization, selectedProject, setSelectedProject } = useAppStore();
+
+  // Get user from localStorage
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   useEffect(() => {
     loadOrganizations();
@@ -107,6 +115,26 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const handleProjectClick = (project: Project) => {
     setSelectedProject(project);
     navigate(`/projects/${project.id}`);
+  };
+
+  const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorElUser(event.currentTarget);
+  };
+
+  const handleCloseUserMenu = () => {
+    setAnchorElUser(null);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    toast.success('Logged out successfully');
+    navigate('/login');
+  };
+
+  const handleProfile = () => {
+    handleCloseUserMenu();
+    navigate('/settings');
   };
 
   const menuItems = [
@@ -180,9 +208,53 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <IconButton color="inherit">
             <NotificationsIcon />
           </IconButton>
-          <IconButton color="inherit">
-            <AccountCircleIcon />
+          
+          <IconButton onClick={handleOpenUserMenu} color="inherit">
+            {user.avatar ? (
+              <Avatar src={user.avatar} alt={user.username} sx={{ width: 32, height: 32 }} />
+            ) : (
+              <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
+                {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+              </Avatar>
+            )}
           </IconButton>
+          
+          <Menu
+            sx={{ mt: '45px' }}
+            id="menu-appbar"
+            anchorEl={anchorElUser}
+            anchorOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+            keepMounted
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+            open={Boolean(anchorElUser)}
+            onClose={handleCloseUserMenu}
+          >
+            <MenuItem disabled>
+              <Box>
+                <Typography variant="subtitle2">{user.first_name} {user.last_name}</Typography>
+                <Typography variant="body2" color="text.secondary">{user.email}</Typography>
+              </Box>
+            </MenuItem>
+            <Divider />
+            <MenuItem onClick={handleProfile}>
+              <ListItemIcon>
+                <PersonIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Profile</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={handleLogout}>
+              <ListItemIcon>
+                <LogoutIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Logout</ListItemText>
+            </MenuItem>
+          </Menu>
         </Toolbar>
       </AppBar>
 
