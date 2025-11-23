@@ -106,7 +106,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
-      - ./traefik.yml:/etc/traefik/traefik.yml:ro
     networks:
       - docker-manager-network
       - web

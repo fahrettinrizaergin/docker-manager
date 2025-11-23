@@ -11,6 +11,12 @@ echo "Cleaning up unused Docker resources..."
 docker image prune -f
 docker builder prune -f
 
+# Remove accidental directory created by Docker if it exists
+if [ -d "traefik.yml" ]; then
+    echo "Removing accidental traefik.yml directory..."
+    rm -rf traefik.yml
+fi
+
 # Stop containers
 echo "Stopping containers..."
 docker-compose down --remove-orphans || true
