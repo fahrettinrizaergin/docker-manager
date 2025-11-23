@@ -71,14 +71,14 @@ func Migrate() error {
 		// Project models
 		&models.Project{},
 		&models.Folder{},
-		&models.Application{},
+		&models.Container{},
 		&models.Environment{},
 		&models.EnvVar{},
 		&models.TeamProject{},
 
 		// Docker models
 		&models.Node{},
-		&models.Container{},
+		&models.ContainerInstance{},
 		&models.Volume{},
 		&models.Network{},
 		&models.Image{},

@@ -934,21 +934,21 @@ func (h *ProjectHandler) ListEnvironments(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": environments})
 }
 
-// ApplicationHandler handles application operations
-type ApplicationHandler struct {
+// ContainerHandler handles application operations
+type ContainerHandler struct {
 	cfg     *config.Config
-	service *service.ApplicationService
+	service *service.ContainerService
 }
 
-func NewApplicationHandler(cfg *config.Config, svc *service.ApplicationService) *ApplicationHandler {
-	return &ApplicationHandler{
+func NewContainerHandler(cfg *config.Config, svc *service.ContainerService) *ContainerHandler {
+	return &ContainerHandler{
 		cfg:     cfg,
 		service: svc,
 	}
 }
 
-func (h *ApplicationHandler) CreateApplication(c *gin.Context) {
-	var req models.Application
+func (h *ContainerHandler) CreateContainer(c *gin.Context) {
+	var req models.Container
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
 		return
@@ -962,12 +962,12 @@ func (h *ApplicationHandler) CreateApplication(c *gin.Context) {
 	c.JSON(http.StatusCreated, req)
 }
 
-func (h *ApplicationHandler) ListApplications(c *gin.Context) {
+func (h *ContainerHandler) ListContainers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 	projectIDStr := c.Query("project_id")
 
-	var apps []models.Application
+	var apps []models.Container
 	var total int64
 	var err error
 
@@ -983,7 +983,7 @@ func (h *ApplicationHandler) ListApplications(c *gin.Context) {
 	}
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch applications"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch containers"})
 		return
 	}
 
@@ -996,7 +996,7 @@ func (h *ApplicationHandler) ListApplications(c *gin.Context) {
 	})
 }
 
-func (h *ApplicationHandler) GetApplication(c *gin.Context) {
+func (h *ContainerHandler) GetContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
@@ -1009,14 +1009,14 @@ func (h *ApplicationHandler) GetApplication(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch application"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch container"})
 		return
 	}
 
 	c.JSON(http.StatusOK, app)
 }
 
-func (h *ApplicationHandler) UpdateApplication(c *gin.Context) {
+func (h *ContainerHandler) UpdateContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
@@ -1042,7 +1042,7 @@ func (h *ApplicationHandler) UpdateApplication(c *gin.Context) {
 	c.JSON(http.StatusOK, app)
 }
 
-func (h *ApplicationHandler) DeleteApplication(c *gin.Context) {
+func (h *ContainerHandler) DeleteContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
@@ -1054,44 +1054,44 @@ func (h *ApplicationHandler) DeleteApplication(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete application"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete container"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Application deleted successfully"})
 }
 
-func (h *ApplicationHandler) StartApplication(c *gin.Context) {
+func (h *ContainerHandler) StartContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
 		return
 	}
 
-	if err := h.service.UpdateStatus(id, constants.ApplicationStatusRunning); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start application"})
+	if err := h.service.UpdateStatus(id, constants.ContainerStatusRunning); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start container"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Application started successfully"})
 }
 
-func (h *ApplicationHandler) StopApplication(c *gin.Context) {
+func (h *ContainerHandler) StopContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
 		return
 	}
 
-	if err := h.service.UpdateStatus(id, constants.ApplicationStatusStopped); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stop application"})
+	if err := h.service.UpdateStatus(id, constants.ContainerStatusStopped); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stop container"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Application stopped successfully"})
 }
 
-func (h *ApplicationHandler) RestartApplication(c *gin.Context) {
+func (h *ContainerHandler) RestartContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
@@ -1099,27 +1099,27 @@ func (h *ApplicationHandler) RestartApplication(c *gin.Context) {
 	}
 
 	// First stop, then start
-	if err := h.service.UpdateStatus(id, constants.ApplicationStatusStopped); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stop application"})
+	if err := h.service.UpdateStatus(id, constants.ContainerStatusStopped); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stop container"})
 		return
 	}
 
-	if err := h.service.UpdateStatus(id, constants.ApplicationStatusRunning); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start application"})
+	if err := h.service.UpdateStatus(id, constants.ContainerStatusRunning); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start container"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Application restarted successfully"})
 }
 
-func (h *ApplicationHandler) DeployApplication(c *gin.Context) {
+func (h *ContainerHandler) DeployContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
 		return
 	}
 
-	if err := h.service.UpdateStatus(id, constants.ApplicationStatusDeploying); err != nil {
+	if err := h.service.UpdateStatus(id, constants.ContainerStatusDeploying); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to deploy application"})
 		return
 	}
@@ -1127,11 +1127,11 @@ func (h *ApplicationHandler) DeployApplication(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gin.H{"message": "Deployment started"})
 }
 
-func (h *ApplicationHandler) RollbackApplication(c *gin.Context) {
-	c.JSON(501, gin.H{"message": "RollbackApplication endpoint - not implemented"})
+func (h *ContainerHandler) RollbackContainer(c *gin.Context) {
+	c.JSON(501, gin.H{"message": "RollbackContainer endpoint - not implemented"})
 }
 
-func (h *ApplicationHandler) ListEnvVars(c *gin.Context) {
+func (h *ContainerHandler) ListEnvVars(c *gin.Context) {
 	appID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
@@ -1147,7 +1147,7 @@ func (h *ApplicationHandler) ListEnvVars(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": envVars})
 }
 
-func (h *ApplicationHandler) CreateEnvVar(c *gin.Context) {
+func (h *ContainerHandler) CreateEnvVar(c *gin.Context) {
 	appID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid application ID"})
@@ -1159,7 +1159,7 @@ func (h *ApplicationHandler) CreateEnvVar(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
-	req.ApplicationID = &appID
+	req.ContainerID = &appID
 
 	if err := h.service.CreateEnvVar(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -1169,7 +1169,7 @@ func (h *ApplicationHandler) CreateEnvVar(c *gin.Context) {
 	c.JSON(http.StatusCreated, req)
 }
 
-func (h *ApplicationHandler) UpdateEnvVar(c *gin.Context) {
+func (h *ContainerHandler) UpdateEnvVar(c *gin.Context) {
 	envID, err := uuid.Parse(c.Param("envId"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid environment variable ID"})
@@ -1195,7 +1195,7 @@ func (h *ApplicationHandler) UpdateEnvVar(c *gin.Context) {
 	c.JSON(http.StatusOK, envVar)
 }
 
-func (h *ApplicationHandler) DeleteEnvVar(c *gin.Context) {
+func (h *ContainerHandler) DeleteEnvVar(c *gin.Context) {
 	envID, err := uuid.Parse(c.Param("envId"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid environment variable ID"})
@@ -1214,11 +1214,11 @@ func (h *ApplicationHandler) DeleteEnvVar(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Environment variable deleted successfully"})
 }
 
-func (h *ApplicationHandler) GetLogs(c *gin.Context) {
+func (h *ContainerHandler) GetLogs(c *gin.Context) {
 	c.JSON(501, gin.H{"message": "GetLogs endpoint - not implemented"})
 }
 
-func (h *ApplicationHandler) GetStats(c *gin.Context) {
+func (h *ContainerHandler) GetStats(c *gin.Context) {
 	c.JSON(501, gin.H{"message": "GetStats endpoint - not implemented"})
 }
 
@@ -1448,7 +1448,7 @@ type DashboardHandler struct {
 	userService       *service.UserService
 	orgService        *service.OrganizationService
 	projectService    *service.ProjectService
-	appService        *service.ApplicationService
+	appService        *service.ContainerService
 	containerService  *service.ContainerService
 }
 
@@ -1457,7 +1457,7 @@ func NewDashboardHandler(
 	userService *service.UserService,
 	orgService *service.OrganizationService,
 	projectService *service.ProjectService,
-	appService *service.ApplicationService,
+	appService *service.ContainerService,
 	containerService *service.ContainerService,
 ) *DashboardHandler {
 	return &DashboardHandler{
@@ -1551,21 +1551,21 @@ func (h *DashboardHandler) GetStats(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": stats})
 }
 
-// ContainerHandler handles container operations
-type ContainerHandler struct {
+// ContainerInstanceHandler handles container operations
+type ContainerInstanceHandler struct {
 	cfg     *config.Config
-	service *service.ContainerService
+	service *service.ContainerInstanceService
 }
 
-func NewContainerHandler(cfg *config.Config, svc *service.ContainerService) *ContainerHandler {
-	return &ContainerHandler{
+func NewContainerInstanceHandler(cfg *config.Config, svc *service.ContainerInstanceService) *ContainerInstanceHandler {
+	return &ContainerInstanceHandler{
 		cfg:     cfg,
 		service: svc,
 	}
 }
 
-func (h *ContainerHandler) CreateContainer(c *gin.Context) {
-	var req models.Container
+func (h *ContainerInstanceHandler) CreateContainer(c *gin.Context) {
+	var req models.ContainerInstance
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
 		return
@@ -1579,13 +1579,13 @@ func (h *ContainerHandler) CreateContainer(c *gin.Context) {
 	c.JSON(http.StatusCreated, req)
 }
 
-func (h *ContainerHandler) ListContainers(c *gin.Context) {
+func (h *ContainerInstanceHandler) ListContainers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-	appIDStr := c.Query("application_id")
+	appIDStr := c.Query("container_id")
 	nodeIDStr := c.Query("node_id")
 
-	var containers []models.Container
+	var containers []models.ContainerInstance
 	var total int64
 	var err error
 
@@ -1623,7 +1623,7 @@ func (h *ContainerHandler) ListContainers(c *gin.Context) {
 	})
 }
 
-func (h *ContainerHandler) GetContainer(c *gin.Context) {
+func (h *ContainerInstanceHandler) GetContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
@@ -1643,7 +1643,7 @@ func (h *ContainerHandler) GetContainer(c *gin.Context) {
 	c.JSON(http.StatusOK, container)
 }
 
-func (h *ContainerHandler) UpdateContainer(c *gin.Context) {
+func (h *ContainerInstanceHandler) UpdateContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
@@ -1669,7 +1669,7 @@ func (h *ContainerHandler) UpdateContainer(c *gin.Context) {
 	c.JSON(http.StatusOK, container)
 }
 
-func (h *ContainerHandler) DeleteContainer(c *gin.Context) {
+func (h *ContainerInstanceHandler) DeleteContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
@@ -1688,7 +1688,7 @@ func (h *ContainerHandler) DeleteContainer(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Container deleted successfully"})
 }
 
-func (h *ContainerHandler) StartContainer(c *gin.Context) {
+func (h *ContainerInstanceHandler) StartContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
@@ -1703,7 +1703,7 @@ func (h *ContainerHandler) StartContainer(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Container started successfully"})
 }
 
-func (h *ContainerHandler) StopContainer(c *gin.Context) {
+func (h *ContainerInstanceHandler) StopContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
@@ -1718,7 +1718,7 @@ func (h *ContainerHandler) StopContainer(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Container stopped successfully"})
 }
 
-func (h *ContainerHandler) RestartContainer(c *gin.Context) {
+func (h *ContainerInstanceHandler) RestartContainer(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
@@ -1928,8 +1928,6 @@ func (h *PermissionHandler) GetUserResources(c *gin.Context) {
 		resourceIDs, err = h.service.GetUserOrganizations(userID)
 	case models.ResourceProject:
 		resourceIDs, err = h.service.GetUserProjects(userID)
-	case models.ResourceApplication:
-		resourceIDs, err = h.service.GetUserApplications(userID)
 	case models.ResourceContainer:
 		resourceIDs, err = h.service.GetUserContainers(userID)
 	default:

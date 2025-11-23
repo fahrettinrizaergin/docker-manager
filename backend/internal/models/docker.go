@@ -45,8 +45,8 @@ type Node struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
-	Organization Organization  `gorm:"foreignKey:OrganizationID" json:"organization,omitempty"`
-	Applications []Application `json:"applications,omitempty"`
+	Organization Organization `gorm:"foreignKey:OrganizationID" json:"organization,omitempty"`
+	Containers   []Container  `json:"containers,omitempty"`
 }
 
 func (n *Node) BeforeCreate(tx *gorm.DB) error {
@@ -56,16 +56,16 @@ func (n *Node) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// Container represents a running Docker container
-type Container struct {
-	ID            uuid.UUID `gorm:"type:uuid;primary_key" json:"id"`
-	ApplicationID uuid.UUID `gorm:"type:uuid;not null;index" json:"application_id"`
-	NodeID        uuid.UUID `gorm:"type:uuid;not null;index" json:"node_id"`
-	ContainerID   string    `gorm:"not null;index" json:"container_id"` // Docker container ID
-	Name          string    `gorm:"not null" json:"name"`
-	Image         string    `gorm:"not null" json:"image"`
-	Status        string    `json:"status"`                   // running, stopped, paused, dead, restarting
-	State         *string   `gorm:"type:jsonb" json:"state,omitempty"` // Detailed state from Docker
+// ContainerInstance represents a running Docker container instance
+type ContainerInstance struct {
+	ID          uuid.UUID `gorm:"type:uuid;primary_key" json:"id"`
+	ContainerID uuid.UUID `gorm:"type:uuid;not null;index" json:"container_id"` // Reference to Container (configuration)
+	NodeID      uuid.UUID `gorm:"type:uuid;not null;index" json:"node_id"`
+	DockerID    string    `gorm:"not null;index" json:"docker_id"` // Docker container ID
+	Name        string    `gorm:"not null" json:"name"`
+	Image       string    `gorm:"not null" json:"image"`
+	Status      string    `json:"status"`                        // running, stopped, paused, dead, restarting
+	State       *string   `gorm:"type:jsonb" json:"state,omitempty"` // Detailed state from Docker
 
 	// Runtime info
 	StartedAt    *time.Time `json:"started_at"`
@@ -82,37 +82,37 @@ type Container struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
-	Application Application `gorm:"foreignKey:ApplicationID" json:"application,omitempty"`
-	Node        Node        `gorm:"foreignKey:NodeID" json:"node,omitempty"`
+	Container Container `gorm:"foreignKey:ContainerID" json:"container,omitempty"`
+	Node      Node      `gorm:"foreignKey:NodeID" json:"node,omitempty"`
 }
 
-func (c *Container) BeforeCreate(tx *gorm.DB) error {
-	if c.ID == uuid.Nil {
-		c.ID = uuid.New()
+func (ci *ContainerInstance) BeforeCreate(tx *gorm.DB) error {
+	if ci.ID == uuid.Nil {
+		ci.ID = uuid.New()
 	}
 	return nil
 }
 
 // Volume represents a Docker volume
 type Volume struct {
-	ID            uuid.UUID      `gorm:"type:uuid;primary_key" json:"id"`
-	ApplicationID *uuid.UUID     `gorm:"type:uuid;index" json:"application_id"`
-	NodeID        uuid.UUID      `gorm:"type:uuid;not null;index" json:"node_id"`
-	VolumeID      string         `gorm:"not null" json:"volume_id"` // Docker volume ID
-	Name          string         `gorm:"not null" json:"name"`
-	Driver        string         `gorm:"default:'local'" json:"driver"`
-	MountPath     string         `json:"mount_path"`
-	HostPath      string         `json:"host_path"`
-	Options       *string        `gorm:"type:jsonb" json:"options,omitempty"`
-	Labels        *string        `gorm:"type:jsonb" json:"labels,omitempty"`
-	Size          int64          `json:"size"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
-	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
+	ID          uuid.UUID      `gorm:"type:uuid;primary_key" json:"id"`
+	ContainerID *uuid.UUID     `gorm:"type:uuid;index" json:"container_id"`
+	NodeID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"node_id"`
+	VolumeID    string         `gorm:"not null" json:"volume_id"` // Docker volume ID
+	Name        string         `gorm:"not null" json:"name"`
+	Driver      string         `gorm:"default:'local'" json:"driver"`
+	MountPath   string         `json:"mount_path"`
+	HostPath    string         `json:"host_path"`
+	Options     *string        `gorm:"type:jsonb" json:"options,omitempty"`
+	Labels      *string        `gorm:"type:jsonb" json:"labels,omitempty"`
+	Size        int64          `json:"size"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
-	Application *Application `gorm:"foreignKey:ApplicationID" json:"application,omitempty"`
-	Node        Node         `gorm:"foreignKey:NodeID" json:"node,omitempty"`
+	Container *Container `gorm:"foreignKey:ContainerID" json:"container,omitempty"`
+	Node      Node       `gorm:"foreignKey:NodeID" json:"node,omitempty"`
 }
 
 func (v *Volume) BeforeCreate(tx *gorm.DB) error {

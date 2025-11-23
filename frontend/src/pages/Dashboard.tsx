@@ -20,7 +20,6 @@ interface DashboardStats {
   users?: number;
   organizations: number;
   projects: number;
-  applications: number;
   containers: number;
   active_containers: number;
 }
@@ -119,10 +118,10 @@ const Dashboard: React.FC = () => {
             <Grid item xs={12} md={6} lg={3}>
               <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <AppsIcon color="primary" sx={{ fontSize: 40, mb: 1 }} />
-                <Typography variant="h6" color="primary">Applications</Typography>
-                <Typography variant="h3">{stats.applications}</Typography>
+                <Typography variant="h6" color="primary">Containers</Typography>
+                <Typography variant="h3">{stats.containers}</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Total applications
+                  Total containers
                 </Typography>
               </Paper>
             </Grid>

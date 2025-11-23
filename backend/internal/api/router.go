@@ -15,7 +15,7 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	userRepo := repository.NewUserRepository(db)
 	orgRepo := repository.NewOrganizationRepository(db)
 	projectRepo := repository.NewProjectRepository(db)
-	appRepo := repository.NewApplicationRepository(db)
+	// containerInstanceRepo := repository.NewContainerInstanceRepository(db)
 	containerRepo := repository.NewContainerRepository(db)
 	permissionRepo := repository.NewPermissionRepository(db)
 
@@ -23,7 +23,7 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	userService := service.NewUserService(userRepo)
 	orgService := service.NewOrganizationService(orgRepo)
 	projectService := service.NewProjectService(projectRepo)
-	appService := service.NewApplicationService(appRepo)
+	// containerInstanceService := service.NewContainerInstanceService(containerInstanceRepo)
 	containerService := service.NewContainerService(containerRepo)
 	permissionService := service.NewPermissionService(permissionRepo)
 
@@ -139,34 +139,34 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 				projects.GET("/:id/environments", projectHandler.ListEnvironments)
 			}
 
-			// Application routes
-			applications := protected.Group("/applications")
+			// Container routes
+			containers := protected.Group("/containers")
 			{
-				appHandler := NewApplicationHandler(cfg, appService)
-				applications.POST("", appHandler.CreateApplication)
-				applications.GET("", appHandler.ListApplications)
-				applications.GET("/:id", appHandler.GetApplication)
-				applications.PUT("/:id", appHandler.UpdateApplication)
-				applications.DELETE("/:id", appHandler.DeleteApplication)
+				containerHandler := NewContainerHandler(cfg, containerService)
+				containers.POST("", containerHandler.CreateContainer)
+				containers.GET("", containerHandler.ListContainers)
+				containers.GET("/:id", containerHandler.GetContainer)
+				containers.PUT("/:id", containerHandler.UpdateContainer)
+				containers.DELETE("/:id", containerHandler.DeleteContainer)
 
-				// Application actions
-				applications.POST("/:id/start", appHandler.StartApplication)
-				applications.POST("/:id/stop", appHandler.StopApplication)
-				applications.POST("/:id/restart", appHandler.RestartApplication)
-				applications.POST("/:id/deploy", appHandler.DeployApplication)
-				applications.POST("/:id/rollback", appHandler.RollbackApplication)
+				// Container actions
+				containers.POST("/:id/start", containerHandler.StartContainer)
+				containers.POST("/:id/stop", containerHandler.StopContainer)
+				containers.POST("/:id/restart", containerHandler.RestartContainer)
+				containers.POST("/:id/deploy", containerHandler.DeployContainer)
+				containers.POST("/:id/rollback", containerHandler.RollbackContainer)
 
 				// Environment variables
-				applications.GET("/:id/env", appHandler.ListEnvVars)
-				applications.POST("/:id/env", appHandler.CreateEnvVar)
-				applications.PUT("/:id/env/:envId", appHandler.UpdateEnvVar)
-				applications.DELETE("/:id/env/:envId", appHandler.DeleteEnvVar)
+				containers.GET("/:id/env", containerHandler.ListEnvVars)
+				containers.POST("/:id/env", containerHandler.CreateEnvVar)
+				containers.PUT("/:id/env/:envId", containerHandler.UpdateEnvVar)
+				containers.DELETE("/:id/env/:envId", containerHandler.DeleteEnvVar)
 
 				// Logs
-				applications.GET("/:id/logs", appHandler.GetLogs)
+				containers.GET("/:id/logs", containerHandler.GetLogs)
 
 				// Stats
-				applications.GET("/:id/stats", appHandler.GetStats)
+				containers.GET("/:id/stats", containerHandler.GetStats)
 			}
 
 			// Node routes
@@ -253,25 +253,10 @@ func SetupRouter(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			// Dashboard routes
 			dashboard := protected.Group("/dashboard")
 			{
-				dashboardHandler := NewDashboardHandler(cfg, userService, orgService, projectService, appService, containerService)
+				dashboardHandler := NewDashboardHandler(cfg, userService, orgService, projectService, containerService, containerService)
 				dashboard.GET("/stats", dashboardHandler.GetStats)
 			}
 
-			// Container routes
-			containers := protected.Group("/containers")
-			{
-				containerHandler := NewContainerHandler(cfg, containerService)
-				containers.POST("", containerHandler.CreateContainer)
-				containers.GET("", containerHandler.ListContainers)
-				containers.GET("/:id", containerHandler.GetContainer)
-				containers.PUT("/:id", containerHandler.UpdateContainer)
-				containers.DELETE("/:id", containerHandler.DeleteContainer)
-
-				// Container actions
-				containers.POST("/:id/start", containerHandler.StartContainer)
-				containers.POST("/:id/stop", containerHandler.StopContainer)
-				containers.POST("/:id/restart", containerHandler.RestartContainer)
-			}
 
 			// Permission routes
 			permissions := protected.Group("/permissions")

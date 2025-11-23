@@ -66,8 +66,8 @@ export interface Environment {
   updated_at: string;
 }
 
-// Application types
-export interface Application {
+// Container types
+export interface Container {
   id: string;
   project_id: string;
   folder_id?: string;
@@ -133,7 +133,7 @@ export interface Application {
 
 export interface EnvVar {
   id: string;
-  application_id?: string;
+  container_id?: string;
   environment_id?: string;
   project_id?: string;
   key: string;
@@ -145,12 +145,12 @@ export interface EnvVar {
   updated_at: string;
 }
 
-// Container types
-export interface Container {
+// Container Instance types (running Docker containers)
+export interface ContainerInstance {
   id: string;
-  application_id: string;
-  node_id: string;
   container_id: string;
+  node_id: string;
+  docker_id: string;
   name: string;
   image: string;
   status: string;
@@ -163,14 +163,14 @@ export interface Container {
   networks?: string;
   created_at: string;
   updated_at: string;
-  application?: Application;
+  container?: Container;
 }
 
 // Permission types
 export interface UserPermission {
   id: string;
   user_id: string;
-  resource_type: 'organization' | 'project' | 'application' | 'container';
+  resource_type: 'organization' | 'project' | 'container' | 'container_instance';
   resource_id: string;
   permissions: string; // JSON array
   granted_by: string;

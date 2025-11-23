@@ -185,74 +185,8 @@ class ApiService {
     return response.data;
   }
 
-  // Applications
-  async getApplications(params?: { page?: number; page_size?: number; project_id?: string }) {
-    const response = await this.client.get('/applications', { params });
-    return response.data;
-  }
-
-  async getApplication(id: string) {
-    const response = await this.client.get(`/applications/${id}`);
-    return response.data;
-  }
-
-  async createApplication(data: any) {
-    const response = await this.client.post('/applications', data);
-    return response.data;
-  }
-
-  async updateApplication(id: string, data: any) {
-    const response = await this.client.put(`/applications/${id}`, data);
-    return response.data;
-  }
-
-  async deleteApplication(id: string) {
-    const response = await this.client.delete(`/applications/${id}`);
-    return response.data;
-  }
-
-  async startApplication(id: string) {
-    const response = await this.client.post(`/applications/${id}/start`);
-    return response.data;
-  }
-
-  async stopApplication(id: string) {
-    const response = await this.client.post(`/applications/${id}/stop`);
-    return response.data;
-  }
-
-  async restartApplication(id: string) {
-    const response = await this.client.post(`/applications/${id}/restart`);
-    return response.data;
-  }
-
-  async deployApplication(id: string) {
-    const response = await this.client.post(`/applications/${id}/deploy`);
-    return response.data;
-  }
-
-  async getApplicationEnvVars(id: string) {
-    const response = await this.client.get(`/applications/${id}/env`);
-    return response.data;
-  }
-
-  async createApplicationEnvVar(id: string, data: any) {
-    const response = await this.client.post(`/applications/${id}/env`, data);
-    return response.data;
-  }
-
-  async updateApplicationEnvVar(appId: string, envId: string, data: any) {
-    const response = await this.client.put(`/applications/${appId}/env/${envId}`, data);
-    return response.data;
-  }
-
-  async deleteApplicationEnvVar(appId: string, envId: string) {
-    const response = await this.client.delete(`/applications/${appId}/env/${envId}`);
-    return response.data;
-  }
-
   // Containers
-  async getContainers(params?: { page?: number; page_size?: number; application_id?: string; node_id?: string }) {
+  async getContainers(params?: { page?: number; page_size?: number; project_id?: string }) {
     const response = await this.client.get('/containers', { params });
     return response.data;
   }
@@ -291,6 +225,32 @@ class ApiService {
     const response = await this.client.post(`/containers/${id}/restart`);
     return response.data;
   }
+
+  async deployContainer(id: string) {
+    const response = await this.client.post(`/containers/${id}/deploy`);
+    return response.data;
+  }
+
+  async getContainerEnvVars(id: string) {
+    const response = await this.client.get(`/containers/${id}/env`);
+    return response.data;
+  }
+
+  async createContainerEnvVar(id: string, data: any) {
+    const response = await this.client.post(`/containers/${id}/env`, data);
+    return response.data;
+  }
+
+  async updateContainerEnvVar(appId: string, envId: string, data: any) {
+    const response = await this.client.put(`/containers/${appId}/env/${envId}`, data);
+    return response.data;
+  }
+
+  async deleteContainerEnvVar(appId: string, envId: string) {
+    const response = await this.client.delete(`/containers/${appId}/env/${envId}`);
+    return response.data;
+  }
+
 
   // Permissions
   async grantPermission(data: {

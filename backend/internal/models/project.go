@@ -25,7 +25,7 @@ type Project struct {
 	Organization Organization  `gorm:"foreignKey:OrganizationID" json:"organization,omitempty"`
 	Teams        []Team        `gorm:"many2many:team_projects;" json:"teams,omitempty"`
 	Folders      []Folder      `json:"folders,omitempty"`
-	Applications []Application `json:"applications,omitempty"`
+	Containers   []Container   `json:"containers,omitempty"`
 	Environments []Environment `json:"environments,omitempty"`
 }
 
@@ -52,7 +52,7 @@ type Folder struct {
 	Project      Project       `gorm:"foreignKey:ProjectID" json:"project,omitempty"`
 	Parent       *Folder       `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
 	SubFolders   []Folder      `gorm:"foreignKey:ParentID" json:"sub_folders,omitempty"`
-	Applications []Application `json:"applications,omitempty"`
+	Containers   []Container   `json:"containers,omitempty"`
 }
 
 func (f *Folder) BeforeCreate(tx *gorm.DB) error {
@@ -62,10 +62,10 @@ func (f *Folder) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// Application represents a Docker application (can be single container or compose)
+// Container represents a Docker container configuration (can be single container or compose)
 // Note: JSONB fields (Domains, HealthCheck, Labels, Capabilities) use *string to allow NULL in database.
 // This prevents PostgreSQL errors when fields are not provided, as empty string "" is invalid JSON.
-type Application struct {
+type Container struct {
 	ID          uuid.UUID  `gorm:"type:uuid;primary_key" json:"id"`
 	ProjectID   uuid.UUID  `gorm:"type:uuid;not null;index" json:"project_id"`
 	FolderID    *uuid.UUID `gorm:"type:uuid;index" json:"folder_id"`
@@ -132,18 +132,18 @@ type Application struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
-	Project     Project      `gorm:"foreignKey:ProjectID" json:"project,omitempty"`
-	Folder      *Folder      `gorm:"foreignKey:FolderID" json:"folder,omitempty"`
-	Node        *Node        `gorm:"foreignKey:NodeID" json:"node,omitempty"`
-	Containers  []Container  `json:"containers,omitempty"`
-	Volumes     []Volume     `json:"volumes,omitempty"`
-	EnvVars     []EnvVar     `json:"env_vars,omitempty"`
-	Deployments []Deployment `json:"deployments,omitempty"`
+	Project           Project             `gorm:"foreignKey:ProjectID" json:"project,omitempty"`
+	Folder            *Folder             `gorm:"foreignKey:FolderID" json:"folder,omitempty"`
+	Node              *Node               `gorm:"foreignKey:NodeID" json:"node,omitempty"`
+	ContainerInstances []ContainerInstance `json:"container_instances,omitempty"`
+	Volumes           []Volume            `json:"volumes,omitempty"`
+	EnvVars           []EnvVar            `json:"env_vars,omitempty"`
+	Deployments       []Deployment        `json:"deployments,omitempty"`
 }
 
-func (a *Application) BeforeCreate(tx *gorm.DB) error {
-	if a.ID == uuid.Nil {
-		a.ID = uuid.New()
+func (c *Container) BeforeCreate(tx *gorm.DB) error {
+	if c.ID == uuid.Nil {
+		c.ID = uuid.New()
 	}
 	return nil
 }
@@ -177,7 +177,7 @@ func (e *Environment) BeforeCreate(tx *gorm.DB) error {
 // EnvVar represents an environment variable
 type EnvVar struct {
 	ID            uuid.UUID      `gorm:"type:uuid;primary_key" json:"id"`
-	ApplicationID *uuid.UUID     `gorm:"type:uuid;index" json:"application_id"`
+	ContainerID   *uuid.UUID     `gorm:"type:uuid;index" json:"container_id"`
 	EnvironmentID *uuid.UUID     `gorm:"type:uuid;index" json:"environment_id"`
 	ProjectID     *uuid.UUID     `gorm:"type:uuid;index" json:"project_id"` // For shared variables
 	Key           string         `gorm:"not null" json:"key"`
@@ -190,7 +190,7 @@ type EnvVar struct {
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
-	Application *Application `gorm:"foreignKey:ApplicationID" json:"application,omitempty"`
+	Container   *Container   `gorm:"foreignKey:ContainerID" json:"container,omitempty"`
 	Environment *Environment `gorm:"foreignKey:EnvironmentID" json:"environment,omitempty"`
 }
 

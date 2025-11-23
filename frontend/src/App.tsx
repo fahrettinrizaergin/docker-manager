@@ -15,7 +15,6 @@ import ProjectDetail from './pages/ProjectDetail';
 import Containers from './pages/Containers';
 import ContainerConfiguration from './pages/ContainerConfiguration';
 import Nodes from './pages/Nodes';
-import Deployments from './pages/Deployments';
 import Templates from './pages/Templates';
 import Settings from './pages/Settings';
 
@@ -64,7 +63,6 @@ const App: React.FC = () => {
             <Route path="/project/:projectId/environment/:containerId" element={<PrivateRoute><ContainerConfiguration /></PrivateRoute>} />
             <Route path="/containers" element={<PrivateRoute><Containers /></PrivateRoute>} />
             <Route path="/nodes" element={<PrivateRoute><Nodes /></PrivateRoute>} />
-            <Route path="/deployments" element={<PrivateRoute><Deployments /></PrivateRoute>} />
             <Route path="/templates" element={<PrivateRoute><Templates /></PrivateRoute>} />
             <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
             

@@ -44,7 +44,7 @@ const Permissions: React.FC = () => {
   const [editingPermission, setEditingPermission] = useState<UserPermission | null>(null);
   const [formData, setFormData] = useState({
     user_id: '',
-    resource_type: 'organization' as 'organization' | 'project' | 'application' | 'container',
+    resource_type: 'organization' as 'organization' | 'project' | 'container' | 'container_instance',
     resource_id: '',
     permissions: {
       read: false,
@@ -292,8 +292,8 @@ const Permissions: React.FC = () => {
                     >
                       <MenuItem value="organization">Organization</MenuItem>
                       <MenuItem value="project">Project</MenuItem>
-                      <MenuItem value="application">Application</MenuItem>
                       <MenuItem value="container">Container</MenuItem>
+                      <MenuItem value="container_instance">Container Instance</MenuItem>
                     </Select>
                   </FormControl>
                   <TextField

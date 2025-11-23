@@ -9,9 +9,9 @@ import (
 
 // Deployment represents a deployment record
 type Deployment struct {
-	ID            uuid.UUID `gorm:"type:uuid;primary_key" json:"id"`
-	ApplicationID uuid.UUID `gorm:"type:uuid;not null;index" json:"application_id"`
-	UserID        uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"`
+	ID          uuid.UUID `gorm:"type:uuid;primary_key" json:"id"`
+	ContainerID uuid.UUID `gorm:"type:uuid;not null;index" json:"container_id"`
+	UserID      uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"`
 	Version       string    `json:"version"`
 	CommitSHA     string    `json:"commit_sha"`
 	Branch        string    `json:"branch"`
@@ -47,8 +47,8 @@ type Deployment struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
-	Application Application `gorm:"foreignKey:ApplicationID" json:"application,omitempty"`
-	User        User        `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	Container Container `gorm:"foreignKey:ContainerID" json:"container,omitempty"`
+	User      User      `gorm:"foreignKey:UserID" json:"user,omitempty"`
 }
 
 func (d *Deployment) BeforeCreate(tx *gorm.DB) error {
@@ -85,9 +85,9 @@ func (dq *DeploymentQueue) BeforeCreate(tx *gorm.DB) error {
 
 // Webhook represents a webhook configuration
 type Webhook struct {
-	ID             uuid.UUID  `gorm:"type:uuid;primary_key" json:"id"`
-	ApplicationID  *uuid.UUID `gorm:"type:uuid;index" json:"application_id"`
-	ProjectID      *uuid.UUID `gorm:"type:uuid;index" json:"project_id"`
+	ID          uuid.UUID  `gorm:"type:uuid;primary_key" json:"id"`
+	ContainerID *uuid.UUID `gorm:"type:uuid;index" json:"container_id"`
+	ProjectID   *uuid.UUID `gorm:"type:uuid;index" json:"project_id"`
 	OrganizationID uuid.UUID  `gorm:"type:uuid;not null;index" json:"organization_id"`
 	Name           string     `gorm:"not null" json:"name"`
 	Type           string     `gorm:"not null" json:"type"` // gitlab, bitbucket, github, gitea, generic
@@ -105,7 +105,7 @@ type Webhook struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
-	Application  *Application `gorm:"foreignKey:ApplicationID" json:"application,omitempty"`
+	Container    *Container   `gorm:"foreignKey:ContainerID" json:"container,omitempty"`
 	Project      *Project     `gorm:"foreignKey:ProjectID" json:"project,omitempty"`
 	Organization Organization `gorm:"foreignKey:OrganizationID" json:"organization,omitempty"`
 }
@@ -119,16 +119,16 @@ func (w *Webhook) BeforeCreate(tx *gorm.DB) error {
 
 // CronJob represents a scheduled task
 type CronJob struct {
-	ID             uuid.UUID  `gorm:"type:uuid;primary_key" json:"id"`
-	ApplicationID  *uuid.UUID `gorm:"type:uuid;index" json:"application_id"`
-	ProjectID      *uuid.UUID `gorm:"type:uuid;index" json:"project_id"`
+	ID          uuid.UUID  `gorm:"type:uuid;primary_key" json:"id"`
+	ContainerID *uuid.UUID `gorm:"type:uuid;index" json:"container_id"`
+	ProjectID   *uuid.UUID `gorm:"type:uuid;index" json:"project_id"`
 	OrganizationID uuid.UUID  `gorm:"type:uuid;not null;index" json:"organization_id"`
 	Name           string     `gorm:"not null" json:"name"`
 	Description    string     `json:"description"`
 	Schedule       string     `gorm:"not null" json:"schedule"` // Cron expression
-	Command        string     `gorm:"not null" json:"command"`
-	Container      string     `json:"container"` // Target container
-	IsActive       bool       `gorm:"default:true" json:"is_active"`
+	Command          string     `gorm:"not null" json:"command"`
+	TargetContainer  string     `json:"target_container"` // Target container instance
+	IsActive         bool       `gorm:"default:true" json:"is_active"`
 
 	// Execution info
 	LastRunAt  *time.Time `json:"last_run_at"`
@@ -141,7 +141,7 @@ type CronJob struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
-	Application  *Application `gorm:"foreignKey:ApplicationID" json:"application,omitempty"`
+	Container    *Container   `gorm:"foreignKey:ContainerID" json:"container,omitempty"`
 	Project      *Project     `gorm:"foreignKey:ProjectID" json:"project,omitempty"`
 	Organization Organization `gorm:"foreignKey:OrganizationID" json:"organization,omitempty"`
 }
@@ -196,8 +196,8 @@ type Notification struct {
 	IsRead         bool       `gorm:"default:false" json:"is_read"`
 
 	// Related entities
-	ApplicationID *uuid.UUID `gorm:"type:uuid" json:"application_id"`
-	DeploymentID  *uuid.UUID `gorm:"type:uuid" json:"deployment_id"`
+	ContainerID  *uuid.UUID `gorm:"type:uuid" json:"container_id"`
+	DeploymentID *uuid.UUID `gorm:"type:uuid" json:"deployment_id"`
 
 	// Metadata
 	Metadata *string `gorm:"type:jsonb" json:"metadata,omitempty"`
@@ -208,7 +208,7 @@ type Notification struct {
 	// Relationships
 	Organization Organization `gorm:"foreignKey:OrganizationID" json:"organization,omitempty"`
 	User         *User        `gorm:"foreignKey:UserID" json:"user,omitempty"`
-	Application  *Application `gorm:"foreignKey:ApplicationID" json:"application,omitempty"`
+	Container    *Container   `gorm:"foreignKey:ContainerID" json:"container,omitempty"`
 	Deployment   *Deployment  `gorm:"foreignKey:DeploymentID" json:"deployment,omitempty"`
 }
 
