@@ -45,7 +45,7 @@ type Organization struct {
 	Avatar      string         `json:"avatar"`
 	OwnerID     uuid.UUID      `gorm:"type:uuid;not null" json:"owner_id"`
 	IsActive    bool           `gorm:"default:true" json:"is_active"`
-	Settings    string         `gorm:"type:jsonb" json:"settings"` // JSON settings
+	Settings    *string        `gorm:"type:jsonb" json:"settings,omitempty"` // JSON settings
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
@@ -71,7 +71,7 @@ type Team struct {
 	Name           string         `gorm:"not null" json:"name"`
 	Slug           string         `gorm:"not null" json:"slug"`
 	Description    string         `json:"description"`
-	Permissions    string         `gorm:"type:jsonb" json:"permissions"` // JSON permissions
+	Permissions    *string        `gorm:"type:jsonb" json:"permissions,omitempty"` // JSON permissions
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`

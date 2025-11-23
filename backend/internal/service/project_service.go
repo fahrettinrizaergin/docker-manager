@@ -108,7 +108,7 @@ func (s *ProjectService) Update(id uuid.UUID, updates map[string]interface{}) (*
 		project.Status = status
 	}
 	if settings, ok := updates["settings"].(string); ok {
-		project.Settings = settings
+		project.Settings = &settings
 	}
 
 	// Update slug if provided and different

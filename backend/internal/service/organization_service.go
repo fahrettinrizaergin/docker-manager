@@ -105,7 +105,7 @@ func (s *OrganizationService) Update(id uuid.UUID, updates map[string]interface{
 		org.IsActive = active
 	}
 	if settings, ok := updates["settings"].(string); ok {
-		org.Settings = settings
+		org.Settings = &settings
 	}
 
 	// Update slug if provided and different

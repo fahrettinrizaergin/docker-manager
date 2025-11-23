@@ -16,7 +16,7 @@ type Project struct {
 	Description    string         `json:"description"`
 	Icon           string         `json:"icon"`
 	Status         string         `gorm:"default:'active'" json:"status"` // active, archived, suspended
-	Settings       string         `gorm:"type:jsonb" json:"settings"`
+	Settings       *string        `gorm:"type:jsonb" json:"settings,omitempty"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
@@ -94,11 +94,11 @@ type Application struct {
 	User       string `json:"user"`
 
 	// Networking
-	Domain       string `json:"domain"`
-	Domains      string `gorm:"type:jsonb" json:"domains"` // Additional domains
-	Port         int    `json:"port"`
-	InternalPort int    `json:"internal_port"`
-	Protocol     string `gorm:"default:'http'" json:"protocol"` // http, https, tcp, udp
+	Domain       string  `json:"domain"`
+	Domains      *string `gorm:"type:jsonb" json:"domains,omitempty"` // Additional domains
+	Port         int     `json:"port"`
+	InternalPort int     `json:"internal_port"`
+	Protocol     string  `gorm:"default:'http'" json:"protocol"` // http, https, tcp, udp
 
 	// Resources
 	CPULimit      float64 `json:"cpu_limit"`
@@ -107,7 +107,7 @@ type Application struct {
 	MemoryReserve int64   `json:"memory_reserve"`
 
 	// Health Check
-	HealthCheck string `gorm:"type:jsonb" json:"health_check"`
+	HealthCheck *string `gorm:"type:jsonb" json:"health_check,omitempty"`
 
 	// Auto Scaling
 	AutoScale      bool    `gorm:"default:false" json:"auto_scale"`
@@ -120,9 +120,9 @@ type Application struct {
 	Strategy string `gorm:"default:'rolling'" json:"strategy"` // rolling, blue-green, canary
 
 	// Settings
-	RestartPolicy string `gorm:"default:'unless-stopped'" json:"restart_policy"`
-	Labels        string `gorm:"type:jsonb" json:"labels"`
-	Capabilities  string `gorm:"type:jsonb" json:"capabilities"`
+	RestartPolicy string  `gorm:"default:'unless-stopped'" json:"restart_policy"`
+	Labels        *string `gorm:"type:jsonb" json:"labels,omitempty"`
+	Capabilities  *string `gorm:"type:jsonb" json:"capabilities,omitempty"`
 
 	// Metadata
 	CreatedAt time.Time      `json:"created_at"`
@@ -155,7 +155,7 @@ type Environment struct {
 	Description string         `json:"description"`
 	Color       string         `json:"color"`
 	IsProtected bool           `gorm:"default:false" json:"is_protected"`
-	Settings    string         `gorm:"type:jsonb" json:"settings"`
+	Settings    *string        `gorm:"type:jsonb" json:"settings,omitempty"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
@@ -203,6 +203,6 @@ func (e *EnvVar) BeforeCreate(tx *gorm.DB) error {
 type TeamProject struct {
 	TeamID      uuid.UUID `gorm:"type:uuid;primaryKey" json:"team_id"`
 	ProjectID   uuid.UUID `gorm:"type:uuid;primaryKey" json:"project_id"`
-	Permissions string    `gorm:"type:jsonb" json:"permissions"` // read, write, deploy, delete
+	Permissions *string   `gorm:"type:jsonb" json:"permissions,omitempty"` // read, write, deploy, delete
 	GrantedAt   time.Time `json:"granted_at"`
 }

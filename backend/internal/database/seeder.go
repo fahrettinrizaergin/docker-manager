@@ -56,6 +56,7 @@ func Seed() error {
 		log.Printf("Created admin user: %s", adminUser.Email)
 
 		// Create default organization
+		settings := "{}"
 		defaultOrg := &models.Organization{
 			ID:          uuid.New(),
 			Name:        "Default Organization",
@@ -63,7 +64,7 @@ func Seed() error {
 			Description: "Default organization for Docker Manager",
 			OwnerID:     adminUser.ID,
 			IsActive:    true,
-			Settings:    "{}",
+			Settings:    &settings,
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
 		}
@@ -89,6 +90,7 @@ func Seed() error {
 		log.Println("Added admin user to default organization")
 
 		// Create a default project
+		projectSettings := "{}"
 		defaultProject := &models.Project{
 			ID:             uuid.New(),
 			OrganizationID: defaultOrg.ID,
@@ -96,7 +98,7 @@ func Seed() error {
 			Slug:           utils.GenerateSlug("Default Project"),
 			Description:    "Default project for getting started",
 			Status:         "active",
-			Settings:       "{}",
+			Settings:       &projectSettings,
 			CreatedAt:      time.Now(),
 			UpdatedAt:      time.Now(),
 		}
