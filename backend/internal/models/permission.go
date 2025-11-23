@@ -18,17 +18,17 @@ const (
 
 // Resource types
 const (
-	ResourceOrganization = "organization"
-	ResourceProject      = "project"
-	ResourceApplication  = "application"
-	ResourceContainer    = "container"
+	ResourceOrganization     = "organization"
+	ResourceProject          = "project"
+	ResourceContainer        = "container"
+	ResourceContainerInstance = "container_instance"
 )
 
 // UserPermission represents granular permissions for a user on a specific resource
 type UserPermission struct {
 	ID           uuid.UUID      `gorm:"type:uuid;primary_key" json:"id"`
 	UserID       uuid.UUID      `gorm:"type:uuid;not null;index" json:"user_id"`
-	ResourceType string         `gorm:"not null;index" json:"resource_type"` // organization, project, application, container
+	ResourceType string         `gorm:"not null;index" json:"resource_type"` // organization, project, container, container_instance
 	ResourceID   uuid.UUID      `gorm:"type:uuid;not null;index" json:"resource_id"`
 	Permissions  string         `gorm:"type:jsonb;not null" json:"permissions"` // JSON array of permissions
 	GrantedBy    uuid.UUID      `gorm:"type:uuid" json:"granted_by"`

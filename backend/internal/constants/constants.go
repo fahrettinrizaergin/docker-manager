@@ -14,20 +14,20 @@ const (
 	ProjectStatusSuspended = "suspended"
 )
 
-// Application types
+// Container types
 const (
-	ApplicationTypeCompose   = "docker-compose"
-	ApplicationTypeContainer = "container"
-	ApplicationTypeTemplate  = "template"
+	ContainerTypeCompose   = "docker-compose"
+	ContainerTypeContainer = "container"
+	ContainerTypeTemplate  = "template"
 )
 
-// Application statuses
+// Container statuses
 const (
-	ApplicationStatusRunning   = "running"
-	ApplicationStatusStopped   = "stopped"
-	ApplicationStatusDeploying = "deploying"
-	ApplicationStatusError     = "error"
-	ApplicationStatusPaused    = "paused"
+	ContainerStatusRunning   = "running"
+	ContainerStatusStopped   = "stopped"
+	ContainerStatusDeploying = "deploying"
+	ContainerStatusError     = "error"
+	ContainerStatusPaused    = "paused"
 )
 
 // ValidOrganizationRoles returns a map of valid organization roles
@@ -48,22 +48,22 @@ func ValidProjectStatuses() map[string]bool {
 	}
 }
 
-// ValidApplicationTypes returns a map of valid application types
-func ValidApplicationTypes() map[string]bool {
+// ValidContainerTypes returns a map of valid container types
+func ValidContainerTypes() map[string]bool {
 	return map[string]bool{
-		ApplicationTypeCompose:   true,
-		ApplicationTypeContainer: true,
-		ApplicationTypeTemplate:  true,
+		ContainerTypeCompose:   true,
+		ContainerTypeContainer: true,
+		ContainerTypeTemplate:  true,
 	}
 }
 
-// ValidApplicationStatuses returns a map of valid application statuses
-func ValidApplicationStatuses() map[string]bool {
+// ValidContainerStatuses returns a map of valid container statuses
+func ValidContainerStatuses() map[string]bool {
 	return map[string]bool{
-		ApplicationStatusRunning:   true,
-		ApplicationStatusStopped:   true,
-		ApplicationStatusDeploying: true,
-		ApplicationStatusError:     true,
-		ApplicationStatusPaused:    true,
+		ContainerStatusRunning:   true,
+		ContainerStatusStopped:   true,
+		ContainerStatusDeploying: true,
+		ContainerStatusError:     true,
+		ContainerStatusPaused:    true,
 	}
 }

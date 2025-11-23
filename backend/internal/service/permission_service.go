@@ -25,10 +25,10 @@ func NewPermissionService(repo *repository.PermissionRepository) *PermissionServ
 func (s *PermissionService) GrantPermission(userID, resourceID uuid.UUID, resourceType string, permissions []string, grantedBy uuid.UUID, expiresAt *time.Time) error {
 	// Validate resource type
 	validTypes := map[string]bool{
-		models.ResourceOrganization: true,
-		models.ResourceProject:      true,
-		models.ResourceApplication:  true,
-		models.ResourceContainer:    true,
+		models.ResourceOrganization:      true,
+		models.ResourceProject:           true,
+		models.ResourceContainer:         true,
+		models.ResourceContainerInstance: true,
 	}
 	if !validTypes[resourceType] {
 		return errors.New("invalid resource type")
@@ -163,25 +163,6 @@ func (s *PermissionService) GetUserProjects(userID uuid.UUID) ([]uuid.UUID, erro
 	}
 
 	return projectIDs, nil
-}
-
-// GetUserApplications retrieves all applications a user has access to
-func (s *PermissionService) GetUserApplications(userID uuid.UUID) ([]uuid.UUID, error) {
-	perms, err := s.repo.GetUserResourcesByType(userID, models.ResourceApplication)
-	if err != nil {
-		return nil, err
-	}
-
-	appIDs := make([]uuid.UUID, len(perms))
-	for i, perm := range perms {
-		// Skip expired permissions
-		if perm.ExpiresAt != nil && perm.ExpiresAt.Before(time.Now()) {
-			continue
-		}
-		appIDs[i] = perm.ResourceID
-	}
-
-	return appIDs, nil
 }
 
 // GetUserContainers retrieves all containers a user has access to
