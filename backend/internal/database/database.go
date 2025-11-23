@@ -55,6 +55,11 @@ func Migrate() error {
 
 	log.Println("Running database migrations...")
 
+	// Run custom migrations first to fix schema issues
+	if err := runCustomMigrations(); err != nil {
+		return fmt.Errorf("failed to run custom migrations: %w", err)
+	}
+
 	// Auto-migrate all models
 	err := DB.AutoMigrate(
 		// User models
@@ -100,6 +105,46 @@ func Migrate() error {
 
 	log.Println("Database migrations completed successfully")
 
+	return nil
+}
+
+// runCustomMigrations runs custom SQL migrations to fix schema issues
+func runCustomMigrations() error {
+	log.Println("Running custom migrations...")
+
+	// Fix application_id column constraint in containers table
+	// This column is a legacy field that's no longer used in the model
+	// Make it nullable to prevent NOT NULL constraint violations
+
+	// Check if the column exists first
+	var columnExists bool
+	err := DB.Raw(`
+		SELECT EXISTS (
+			SELECT 1 
+			FROM information_schema.columns 
+			WHERE table_name = 'containers' 
+			AND column_name = 'application_id'
+			AND table_schema = current_schema()
+		)
+	`).Scan(&columnExists).Error
+
+	if err != nil {
+		log.Printf("Error: Could not check if application_id column exists: %v", err)
+		return fmt.Errorf("failed to check column existence: %w", err)
+	}
+
+	if !columnExists {
+		log.Println("Column application_id does not exist in containers table, skipping migration")
+	} else {
+		// Column exists, attempt to make it nullable
+		if err := DB.Exec("ALTER TABLE containers ALTER COLUMN application_id DROP NOT NULL").Error; err != nil {
+			log.Printf("Error: Could not alter application_id column: %v", err)
+			return fmt.Errorf("failed to alter application_id column: %w", err)
+		}
+		log.Println("Successfully made application_id column nullable")
+	}
+
+	log.Println("Custom migrations completed")
 	return nil
 }
 
