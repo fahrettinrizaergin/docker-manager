@@ -64,7 +64,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const ContainerConfiguration: React.FC = () => {
-  const { containerId } = useParams<{ projectId: string; containerId: string }>();
+  const { projectId, containerId } = useParams<{ projectId: string; containerId: string }>();
   const [container, setContainer] = useState<Container | null>(null);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
@@ -86,11 +86,11 @@ const ContainerConfiguration: React.FC = () => {
   });
 
   // Environment Variables State
-  const [envVars, setEnvVars] = useState<Array<{key: string, value: string, protected: boolean, masked: boolean}>>([]);
-  const [secretVars, setSecretVars] = useState<Array<{key: string, value: string}>>([]);
+  const [envVars, setEnvVars] = useState<Array<{ key: string, value: string, protected: boolean, masked: boolean }>>([]);
+  const [secretVars, setSecretVars] = useState<Array<{ key: string, value: string }>>([]);
 
   // Domains State
-  const [domains, setDomains] = useState<Array<{host: string, path: string, internalPath: string, port: number, https: string}>>([]);
+  const [domains, setDomains] = useState<Array<{ host: string, path: string, internalPath: string, port: number, https: string }>>([]);
 
   // Advanced State
   const [runCommand, setRunCommand] = useState('');
@@ -98,8 +98,8 @@ const ContainerConfiguration: React.FC = () => {
   const [network, setNetwork] = useState('bridge');
   const [resources, setResources] = useState({ memory: '', cpu: '', disk: '' });
   const [replicas, setReplicas] = useState(1);
-  const [volumes, setVolumes] = useState<Array<{type: string, hostPath: string, containerPath: string}>>([]);
-  const [ports, setPorts] = useState<Array<{hostPort: number, containerPort: number, protocol: string}>>([]);
+  const [volumes, setVolumes] = useState<Array<{ type: string, hostPath: string, containerPath: string }>>([]);
+  const [ports, setPorts] = useState<Array<{ hostPort: number, containerPort: number, protocol: string }>>([]);
   const [basicAuth, setBasicAuth] = useState({ enabled: false, username: '', password: '' });
   const [traefik, setTraefik] = useState({ enabled: false, entryPoints: ['http', 'https'], middlewares: [], loadBalancer: false });
 
@@ -112,7 +112,9 @@ const ContainerConfiguration: React.FC = () => {
     try {
       setLoading(true);
       const response = await api.getContainer(containerId!);
-      setContainer(response.data);
+      console.log(response);
+
+      setContainer(response);
     } catch (error: any) {
       console.error('Failed to load container details:', error);
       toast.error('Failed to load container details');
@@ -255,36 +257,36 @@ const ContainerConfiguration: React.FC = () => {
 
                 {(provider === 'github' || provider === 'gitea') && (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <TextField 
-                      label="Account" 
-                      fullWidth 
+                    <TextField
+                      label="Account"
+                      fullWidth
                       value={deploySettings.account}
-                      onChange={(e) => setDeploySettings({...deploySettings, account: e.target.value})}
+                      onChange={(e) => setDeploySettings({ ...deploySettings, account: e.target.value })}
                     />
-                    <TextField 
-                      label="Repository" 
-                      fullWidth 
+                    <TextField
+                      label="Repository"
+                      fullWidth
                       value={deploySettings.repo}
-                      onChange={(e) => setDeploySettings({...deploySettings, repo: e.target.value})}
+                      onChange={(e) => setDeploySettings({ ...deploySettings, repo: e.target.value })}
                     />
-                    <TextField 
-                      label="Branch" 
-                      fullWidth 
+                    <TextField
+                      label="Branch"
+                      fullWidth
                       value={deploySettings.branch}
-                      onChange={(e) => setDeploySettings({...deploySettings, branch: e.target.value})}
+                      onChange={(e) => setDeploySettings({ ...deploySettings, branch: e.target.value })}
                     />
-                    <TextField 
-                      label="Build Path" 
-                      fullWidth 
+                    <TextField
+                      label="Build Path"
+                      fullWidth
                       value={deploySettings.buildPath}
-                      onChange={(e) => setDeploySettings({...deploySettings, buildPath: e.target.value})}
+                      onChange={(e) => setDeploySettings({ ...deploySettings, buildPath: e.target.value })}
                     />
                     <FormControl fullWidth>
                       <InputLabel>Trigger Type</InputLabel>
-                      <Select 
-                        value={deploySettings.triggerType} 
+                      <Select
+                        value={deploySettings.triggerType}
                         label="Trigger Type"
-                        onChange={(e) => setDeploySettings({...deploySettings, triggerType: e.target.value})}
+                        onChange={(e) => setDeploySettings({ ...deploySettings, triggerType: e.target.value })}
                       >
                         <MenuItem value="push">Push</MenuItem>
                         <MenuItem value="tag">Tag</MenuItem>
@@ -295,30 +297,30 @@ const ContainerConfiguration: React.FC = () => {
 
                 {provider === 'docker' && (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <TextField 
-                      label="Image" 
-                      fullWidth 
+                    <TextField
+                      label="Image"
+                      fullWidth
                       value={deploySettings.image}
-                      onChange={(e) => setDeploySettings({...deploySettings, image: e.target.value})}
+                      onChange={(e) => setDeploySettings({ ...deploySettings, image: e.target.value })}
                     />
-                    <TextField 
-                      label="Registry URL" 
-                      fullWidth 
+                    <TextField
+                      label="Registry URL"
+                      fullWidth
                       value={deploySettings.registryUrl}
-                      onChange={(e) => setDeploySettings({...deploySettings, registryUrl: e.target.value})}
+                      onChange={(e) => setDeploySettings({ ...deploySettings, registryUrl: e.target.value })}
                     />
-                    <TextField 
-                      label="Username" 
-                      fullWidth 
+                    <TextField
+                      label="Username"
+                      fullWidth
                       value={deploySettings.username}
-                      onChange={(e) => setDeploySettings({...deploySettings, username: e.target.value})}
+                      onChange={(e) => setDeploySettings({ ...deploySettings, username: e.target.value })}
                     />
-                    <TextField 
-                      label="Password" 
-                      type="password" 
-                      fullWidth 
+                    <TextField
+                      label="Password"
+                      type="password"
+                      fullWidth
                       value={deploySettings.password}
-                      onChange={(e) => setDeploySettings({...deploySettings, password: e.target.value})}
+                      onChange={(e) => setDeploySettings({ ...deploySettings, password: e.target.value })}
                     />
                   </Box>
                 )}
@@ -737,7 +739,7 @@ const ContainerConfiguration: React.FC = () => {
                       label="Memory"
                       fullWidth
                       value={resources.memory}
-                      onChange={(e) => setResources({...resources, memory: e.target.value})}
+                      onChange={(e) => setResources({ ...resources, memory: e.target.value })}
                       placeholder="512M"
                     />
                   </Grid>
@@ -746,7 +748,7 @@ const ContainerConfiguration: React.FC = () => {
                       label="CPU"
                       fullWidth
                       value={resources.cpu}
-                      onChange={(e) => setResources({...resources, cpu: e.target.value})}
+                      onChange={(e) => setResources({ ...resources, cpu: e.target.value })}
                       placeholder="0.5"
                     />
                   </Grid>
@@ -755,7 +757,7 @@ const ContainerConfiguration: React.FC = () => {
                       label="Disk"
                       fullWidth
                       value={resources.disk}
-                      onChange={(e) => setResources({...resources, disk: e.target.value})}
+                      onChange={(e) => setResources({ ...resources, disk: e.target.value })}
                       placeholder="10G"
                     />
                   </Grid>
@@ -833,7 +835,7 @@ const ContainerConfiguration: React.FC = () => {
                   control={
                     <Switch
                       checked={basicAuth.enabled}
-                      onChange={(e) => setBasicAuth({...basicAuth, enabled: e.target.checked})}
+                      onChange={(e) => setBasicAuth({ ...basicAuth, enabled: e.target.checked })}
                     />
                   }
                   label="Enable Basic Auth"
@@ -843,13 +845,13 @@ const ContainerConfiguration: React.FC = () => {
                     <TextField
                       label="Username"
                       value={basicAuth.username}
-                      onChange={(e) => setBasicAuth({...basicAuth, username: e.target.value})}
+                      onChange={(e) => setBasicAuth({ ...basicAuth, username: e.target.value })}
                     />
                     <TextField
                       label="Password"
                       type="password"
                       value={basicAuth.password}
-                      onChange={(e) => setBasicAuth({...basicAuth, password: e.target.value})}
+                      onChange={(e) => setBasicAuth({ ...basicAuth, password: e.target.value })}
                     />
                   </Box>
                 )}
@@ -911,7 +913,7 @@ const ContainerConfiguration: React.FC = () => {
                     control={
                       <Switch
                         checked={traefik.enabled}
-                        onChange={(e) => setTraefik({...traefik, enabled: e.target.checked})}
+                        onChange={(e) => setTraefik({ ...traefik, enabled: e.target.checked })}
                       />
                     }
                     label="Enable Traefik"
@@ -931,7 +933,7 @@ const ContainerConfiguration: React.FC = () => {
                         control={
                           <Switch
                             checked={traefik.loadBalancer}
-                            onChange={(e) => setTraefik({...traefik, loadBalancer: e.target.checked})}
+                            onChange={(e) => setTraefik({ ...traefik, loadBalancer: e.target.checked })}
                           />
                         }
                         label="Load Balancer Stickiness"

@@ -171,6 +171,34 @@ func runCustomMigrations() error {
 		log.Println("Successfully made node_id column nullable")
 	}
 
+	// Fix container_id column constraint in containers table
+	// This column might be a legacy field or created by mistake
+	// Make it nullable to prevent NOT NULL constraint violations
+	var containerColumnExists bool
+	err = DB.Raw(`
+		SELECT EXISTS (
+			SELECT 1 
+			FROM information_schema.columns 
+			WHERE table_name = 'containers' 
+			AND column_name = 'container_id'
+			AND table_schema = current_schema()
+		)
+	`).Scan(&containerColumnExists).Error
+
+	if err != nil {
+		log.Printf("Error: Could not check if container_id column exists: %v", err)
+		return fmt.Errorf("failed to check container_id column existence: %w", err)
+	}
+
+	if containerColumnExists {
+		// Column exists, attempt to make it nullable
+		if err := DB.Exec("ALTER TABLE containers ALTER COLUMN container_id DROP NOT NULL").Error; err != nil {
+			log.Printf("Error: Could not alter container_id column: %v", err)
+			return fmt.Errorf("failed to alter container_id column: %w", err)
+		}
+		log.Println("Successfully made container_id column nullable")
+	}
+
 	log.Println("Custom migrations completed")
 	return nil
 }

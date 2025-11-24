@@ -113,8 +113,13 @@ const ProjectDetailEnhanced: React.FC = () => {
   // Optimistic update effect
   useEffect(() => {
     if (projectId && selectedProject && selectedProject.id === projectId) {
+      console.log(selectedProject);
+
       setProject(selectedProject);
     } else if (projectId && (!project || project.id !== projectId)) {
+      console.log(project);
+      console.log(projectId);
+
       // If we don't have the project in store and the current local project doesn't match URL,
       // clear it to avoid showing wrong data, but don't show error yet (loading will take over)
       setProject(null);
@@ -142,8 +147,11 @@ const ProjectDetailEnhanced: React.FC = () => {
       }
 
       const projectResponse = await api.getProject(projectId!);
-      setProject(projectResponse.data);
-      setSelectedProject(projectResponse.data);
+
+      console.log(projectResponse);
+
+      setProject(projectResponse || []);
+      setSelectedProject(projectResponse);
 
       const appsResponse = await api.getContainers({ project_id: projectId });
       const apps = appsResponse.data || [];

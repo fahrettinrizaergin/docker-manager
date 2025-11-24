@@ -997,13 +997,29 @@ func (h *ContainerHandler) ListContainers(c *gin.Context) {
 }
 
 func (h *ContainerHandler) GetContainer(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
-		return
+	idParam := c.Param("id")
+	var app *models.Container
+	var err error
+
+	// Try to parse as UUID
+	if id, err := uuid.Parse(idParam); err == nil {
+		app, err = h.service.GetByID(id)
+	} else {
+		// If not UUID, try to get by slug if project_id is provided
+		projectIDStr := c.Query("project_id")
+		if projectIDStr != "" {
+			if projectID, err := uuid.Parse(projectIDStr); err == nil {
+				app, err = h.service.GetBySlug(projectID, idParam)
+			} else {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+				return
+			}
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container ID"})
+			return
+		}
 	}
 
-	app, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Container not found"})

@@ -191,8 +191,9 @@ class ApiService {
     return response.data;
   }
 
-  async getContainer(id: string) {
-    const response = await this.client.get(`/containers/${id}`);
+  async getContainer(id: string, projectId?: string) {
+    const params = projectId ? { project_id: projectId } : undefined;
+    const response = await this.client.get(`/containers/${id}`, { params });
     return response.data;
   }
 
