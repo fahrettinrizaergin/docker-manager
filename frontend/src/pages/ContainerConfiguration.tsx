@@ -164,8 +164,7 @@ const ConfigSection: React.FC<ConfigSectionProps> = ({
 };
 
 const ContainerConfiguration: React.FC = () => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { projectId, containerId } = useParams<{ projectId: string; containerId: string }>();
+  const { containerId } = useParams<{ projectId: string; containerId: string }>();
   const [container, setContainer] = useState<Container | null>(null);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
@@ -273,9 +272,9 @@ const ContainerConfiguration: React.FC = () => {
       setSaving('command');
       await api.updateContainer(containerId!, {
         command: runCommand,
-        entrypoint: entrypoint,
+        entrypoint,
         working_dir: workingDir,
-        user: user,
+        user,
       });
       toast.success('Command settings saved successfully');
     } catch (error: unknown) {
@@ -1178,8 +1177,8 @@ const ContainerConfiguration: React.FC = () => {
                       label="Memory Limit"
                       value={resources.memory}
                       onChange={(e) => setResources({ ...resources, memory: e.target.value })}
-                      placeholder="512M, 1G, 2048M"
-                      helperText="Maximum memory the container can use"
+                      placeholder="512 (in MB)"
+                      helperText="Maximum memory in MB (e.g., 512 = 512MB)"
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
@@ -1195,8 +1194,8 @@ const ContainerConfiguration: React.FC = () => {
                       label="Memory Reservation"
                       value={resources.memoryReservation}
                       onChange={(e) => setResources({ ...resources, memoryReservation: e.target.value })}
-                      placeholder="256M"
-                      helperText="Soft limit for memory allocation"
+                      placeholder="256 (in MB)"
+                      helperText="Soft limit in MB"
                     />
                   </Grid>
                   <Grid item xs={12} md={6}>
@@ -1777,7 +1776,7 @@ const ContainerConfiguration: React.FC = () => {
                       label="GPU Count"
                       value={gpuCount}
                       onChange={(e) => setGpuCount(Math.max(1, parseInt(e.target.value) || 1))}
-                      helperText="Number of GPUs to allocate (use 'all' for all available)"
+                      helperText="Number of GPUs to allocate"
                       InputProps={{ inputProps: { min: 1 } }}
                     />
                     <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
@@ -1811,7 +1810,7 @@ const ContainerConfiguration: React.FC = () => {
                         fullWidth
                         label="Entry Points"
                         value={traefik.entryPoints.join(', ')}
-                        onChange={(e) => setTraefik({ ...traefik, entryPoints: e.target.value.split(',').map(s => s.trim()) })}
+                        onChange={(e) => setTraefik({ ...traefik, entryPoints: e.target.value.split(',').map(s => s.trim()).filter(s => s) })}
                         helperText="Comma-separated (e.g., http, https)"
                       />
                     </Grid>
