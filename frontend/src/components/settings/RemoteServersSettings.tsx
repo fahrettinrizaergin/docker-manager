@@ -35,6 +35,7 @@ interface Server {
 }
 
 const RemoteServersSettings: React.FC = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [servers, setServers] = useState<Server[]>([
     { id: 1, name: 'Production Node 1', ip: '192.168.1.100', status: 'connected' },
     { id: 2, name: 'Staging Node', ip: '192.168.1.101', status: 'disconnected' },
