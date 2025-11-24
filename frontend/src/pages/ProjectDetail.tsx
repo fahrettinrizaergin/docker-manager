@@ -110,6 +110,18 @@ const ProjectDetailEnhanced: React.FC = () => {
   const [deleteWithVolumes, setDeleteWithVolumes] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'container' | 'project', id: string } | null>(null);
 
+  // Optimistic update effect
+  useEffect(() => {
+    if (projectId && selectedProject && selectedProject.id === projectId) {
+      setProject(selectedProject);
+    } else if (projectId && (!project || project.id !== projectId)) {
+      // If we don't have the project in store and the current local project doesn't match URL,
+      // clear it to avoid showing wrong data, but don't show error yet (loading will take over)
+      setProject(null);
+    }
+  }, [projectId, selectedProject]);
+
+  // Data fetching effect
   useEffect(() => {
     if (projectId) {
       loadProjectDetails();
@@ -119,15 +131,16 @@ const ProjectDetailEnhanced: React.FC = () => {
 
   const loadProjectDetails = async () => {
     try {
-      // Optimistic update: if we have the project in store and ID matches, use it immediately
-      if (selectedProject && selectedProject.id === projectId) {
-        setProject(selectedProject);
-        setLoading(false);
-      } else {
-        setLoading(true);
+      // Only set loading if we don't have the project data yet
+      if (!project || project.id !== projectId) {
+        // Check if we can get it from store first (in case effect hasn't run yet)
+        if (selectedProject && selectedProject.id === projectId) {
+          setLoading(false);
+        } else {
+          setLoading(true);
+        }
       }
 
-      // Fetch fresh data
       const projectResponse = await api.getProject(projectId!);
       setProject(projectResponse.data);
       setSelectedProject(projectResponse.data);
@@ -135,14 +148,6 @@ const ProjectDetailEnhanced: React.FC = () => {
       const appsResponse = await api.getContainers({ project_id: projectId });
       const apps = appsResponse.data || [];
       setContainers(apps);
-
-      // TODO: Load container instances when API is available
-      // const containerPromises = apps.map((app: Container) => 
-      //   api.getContainerInstances({ container_id: app.id })
-      // );
-      // const containerResponses = await Promise.all(containerPromises);
-      // const allContainers = containerResponses.flatMap((res) => res.data || []);
-      // setContainerInstances(allContainers);
     } catch (error: any) {
       console.error('Failed to load project details:', error);
       // Only show error toast if we don't have the project displayed
