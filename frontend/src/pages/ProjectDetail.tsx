@@ -119,18 +119,23 @@ const ProjectDetailEnhanced: React.FC = () => {
 
   const loadProjectDetails = async () => {
     try {
-      setLoading(true);
-      
-      if (!project || project.id !== projectId) {
-        const projectResponse = await api.getProject(projectId!);
-        setProject(projectResponse.data);
-        setSelectedProject(projectResponse.data);
+      // Optimistic update: if we have the project in store and ID matches, use it immediately
+      if (selectedProject && selectedProject.id === projectId) {
+        setProject(selectedProject);
+        setLoading(false);
+      } else {
+        setLoading(true);
       }
-      
+
+      // Fetch fresh data
+      const projectResponse = await api.getProject(projectId!);
+      setProject(projectResponse.data);
+      setSelectedProject(projectResponse.data);
+
       const appsResponse = await api.getContainers({ project_id: projectId });
       const apps = appsResponse.data || [];
       setContainers(apps);
-      
+
       // TODO: Load container instances when API is available
       // const containerPromises = apps.map((app: Container) => 
       //   api.getContainerInstances({ container_id: app.id })
@@ -140,7 +145,10 @@ const ProjectDetailEnhanced: React.FC = () => {
       // setContainerInstances(allContainers);
     } catch (error: any) {
       console.error('Failed to load project details:', error);
-      toast.error('Failed to load project details');
+      // Only show error toast if we don't have the project displayed
+      if (!project) {
+        toast.error('Failed to load project details');
+      }
     } finally {
       setLoading(false);
     }
@@ -151,7 +159,7 @@ const ProjectDetailEnhanced: React.FC = () => {
       const appsResponse = await api.getContainers({ project_id: projectId });
       const apps = appsResponse.data || [];
       setContainers(apps);
-      
+
       // TODO: Load container instances when API is available
       // const containerPromises = apps.map((app: Container) => 
       //   api.getContainerInstances({ container_id: app.id })
@@ -427,7 +435,7 @@ const ProjectDetailEnhanced: React.FC = () => {
                 </Typography>
               </CardContent>
             </Card>
-          </Grid> 
+          </Grid>
           <Grid item xs={12} lg={6}>
             <Card>
               <CardContent>
@@ -694,8 +702,8 @@ const ProjectDetailEnhanced: React.FC = () => {
           <DialogTitle>Confirm Delete</DialogTitle>
           <DialogContent>
             <Typography>
-              {deleteTarget?.type === 'container' 
-                ? 'Are you sure you want to delete this container?' 
+              {deleteTarget?.type === 'container'
+                ? 'Are you sure you want to delete this container?'
                 : 'Are you sure you want to delete this project? This will remove all containers and data.'}
             </Typography>
             {selectedContainer?.status?.toLowerCase() === 'running' && (
