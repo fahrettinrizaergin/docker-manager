@@ -124,6 +124,7 @@ const ProjectDetailEnhanced: React.FC = () => {
       // clear it to avoid showing wrong data, but don't show error yet (loading will take over)
       setProject(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, selectedProject]);
 
   // Data fetching effect

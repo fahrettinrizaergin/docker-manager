@@ -41,6 +41,7 @@ interface User {
 }
 
 const UsersSettings: React.FC = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [users, setUsers] = useState<User[]>([
     { id: 1, username: 'admin', email: 'admin@example.com', role: 'Admin', organizations: ['All'] },
     { id: 2, username: 'developer', email: 'dev@example.com', role: 'User', organizations: ['Org A'] },

@@ -30,7 +30,6 @@ import {
   Dashboard as DashboardIcon,
   Folder as FolderIcon,
   Storage as StorageIcon,
-  ViewModule as ViewModuleIcon,
   Settings as SettingsIcon,
   Notifications as NotificationsIcon,
   Logout as LogoutIcon,
@@ -149,6 +148,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     navigate('/settings');
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleOpenOrgDialog = () => {
     setOrgFormData({ name: '', description: '' });
     setOpenOrgDialog(true);

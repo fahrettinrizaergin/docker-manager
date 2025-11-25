@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Container, Typography, Paper, Box, Tabs, Tab, Divider } from '@mui/material';
+import { Container, Typography, Paper, Box, Tabs, Tab } from '@mui/material';
 import {
   Settings as SettingsIcon,
   Notifications as NotificationsIcon,
@@ -7,7 +7,6 @@ import {
   Dns as DnsIcon,
   Person as PersonIcon,
   Group as GroupIcon,
-  Security as SecurityIcon,
   Tune as TuneIcon,
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
